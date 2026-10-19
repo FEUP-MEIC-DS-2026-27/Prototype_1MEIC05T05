@@ -1,0 +1,14 @@
+---
+description: Use shadcn/ui for all React interface work in this project
+alwaysApply: true
+---
+
+# UI library
+
+The frontend UI library is [shadcn/ui](https://github.com/shadcn-ui/ui) (https://ui.shadcn.com).
+
+Before adding, styling, composing, or debugging interface components, read and follow `.cursor/skills/shadcn/SKILL.md`.
+
+- Install and update components with the shadcn CLI (`npx shadcn@latest`). Do not copy component source from GitHub by hand.
+- Search the registry before writing custom markup.
+- Use the shadcn MCP server in `.cursor/mcp.json` for registry search, docs, and install commands.
