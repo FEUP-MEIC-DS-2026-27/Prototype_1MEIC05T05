@@ -2,19 +2,22 @@
 
 ## User Story Chosen
 
-Configure Profile Field Visibility by Role **#80**
+View Detailed Researcher Profile and Expertise
+#73
 
 ## Body
 
-As a researcher, I want to control which parts of my profile are visible to which roles so that I keep control over my personal information.
+As a user, I want to view a researcher’s profile, including their skills, role, team, research topics and research history, so that I can understand their expertise and experience.
 
 ## Tech Stack
 
-### Front-End
+**front-end:** React
 
-**React**
+**UI library:** https://github.com/shadcn-ui/ui
 
-### Ui library
+## Test
 
-**https://github.com/shadcn-ui/ui**
-
+```
+cd researcher-profile
+npm run dev
+```
