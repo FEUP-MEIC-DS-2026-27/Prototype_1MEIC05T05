@@ -11,7 +11,7 @@ import {
 import { copy, employmentLabel, memberStatusLabel } from "../copy.ts"
 
 test("joins the three mock researchers", () => {
-  expect(listResearchers().map((row) => row.id)).toEqual([1, 2, 3])
+  expect(listResearchers().map((row) => row.id)).toEqual([1, 2, 3, 4])
   expect(listResearchers()[2]).toMatchObject({
     name: "Maria Ferreira",
     role: "Researcher",
@@ -74,6 +74,38 @@ test("joins the three mock researchers", () => {
   expect(maria?.employmentType).toBe("contractor")
   expect(maria?.team.leader.isSelf).toBe(true)
   expect(maria?.team.topics).toEqual(["Computer Vision"])
+
+  const rita = getResearcherProfile(4)
+  expect(rita).toMatchObject({
+    name: "Rita Oliveira",
+    role: "Researcher",
+    memberStatus: "active",
+    employmentType: "employee",
+    skills: ["Statistics"],
+    topics: ["Data Science"],
+    researchHistory: ["Statistical Modelling"],
+  })
+  expect(rita?.team).toMatchObject({
+    id: 3,
+    name: "Data Platform Team",
+    description: "Research team focused on data platforms.",
+    status: "active",
+  })
+  expect(rita?.team.leader).toMatchObject({
+    id: 4,
+    name: "Rita Oliveira",
+    isSelf: true,
+  })
+  expect(rita?.team.topics).toEqual(["Data Science"])
+  expect(rita?.colleagues).toEqual([])
+  expect(rita?.contract).toEqual({
+    type: "Employment Contract",
+    startDate: "2024-03-01",
+    endDate: "2026-12-31",
+  })
+  expect(rita?.projects).toEqual([
+    { id: 3, name: "MedVis", status: "completed", allocationPercentage: 40 },
+  ])
 
   expect(getResearcherProfile(9)).toBeNull()
 })

@@ -74,6 +74,13 @@ export const teams: TeamRow[] = [
     status: "active",
     leaderId: 3,
   },
+  {
+    id: 3,
+    name: "Data Platform Team",
+    description: "Research team focused on data platforms.",
+    status: "active",
+    leaderId: 4,
+  },
 ]
 
 export const researchers: ResearcherRow[] = [
@@ -107,6 +114,16 @@ export const researchers: ResearcherRow[] = [
     skills: ["Computer Vision"],
     researchHistory: ["Image Processing", "Computer Vision"],
   },
+  {
+    id: 4,
+    name: "Rita Oliveira",
+    role: "Researcher",
+    memberStatus: "active",
+    employmentType: "employee",
+    teamId: 3,
+    skills: ["Statistics"],
+    researchHistory: ["Statistical Modelling"],
+  },
 ]
 
 export const contracts: ContractRow[] = [
@@ -131,6 +148,13 @@ export const contracts: ContractRow[] = [
     startDate: "2023-01-01",
     endDate: "2025-12-31",
   },
+  {
+    id: 4,
+    researcherId: 4,
+    type: "Employment Contract",
+    startDate: "2024-03-01",
+    endDate: "2026-12-31",
+  },
 ]
 
 export const topics: TopicRow[] = [
@@ -144,21 +168,26 @@ export const researcherTopics: ResearcherTopicRow[] = [
   { researcherId: 1, topicId: 2 },
   { researcherId: 2, topicId: 1 },
   { researcherId: 3, topicId: 3 },
+  { researcherId: 4, topicId: 2 },
 ]
 
 export const teamTopics: TeamTopicRow[] = [
   { teamId: 1, topicId: 1 },
   { teamId: 1, topicId: 2 },
   { teamId: 2, topicId: 3 },
+  { teamId: 3, topicId: 2 },
 ]
 
 export const projects: ProjectRow[] = [
   { id: 1, name: "HumanISE", status: "active" },
   { id: 2, name: "AI4Health", status: "active" },
+  { id: 3, name: "MedVis", status: "completed" },
+  { id: 4, name: "Coastal Survey", status: "completed" },
 ]
 
 export const assignments: AssignmentRow[] = [
   { researcherId: 1, projectId: 1, allocationPercentage: 60 },
   { researcherId: 1, projectId: 2, allocationPercentage: 30 },
   { researcherId: 2, projectId: 1, allocationPercentage: 100 },
+  { researcherId: 4, projectId: 3, allocationPercentage: 40 },
 ]
