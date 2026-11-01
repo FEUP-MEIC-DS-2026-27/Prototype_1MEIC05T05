@@ -1,11 +1,16 @@
-import { ResearcherProfile } from "@/components/ResearcherProfile"
+import { BrowserRouter, Route, Routes } from "react-router"
+
+import { ResearcherIndex } from "./components/ResearcherIndex.tsx"
+import { ResearcherProfile } from "./components/ResearcherProfile.tsx"
 
 export function App() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      {/* Drop in any other user-story prototype components alongside this one */}
-      <ResearcherProfile />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<ResearcherIndex />} />
+        <Route path="/researchers/:id" element={<ResearcherProfile />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 

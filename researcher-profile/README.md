@@ -1,21 +1,27 @@
-# React + TypeScript + Vite + shadcn/ui
+# Researcher profile prototype (#73)
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+React + TypeScript + Vite + shadcn/ui (`base-nova`).
 
-## Adding components
+## User story
 
-To add components to your app, run the following command:
+See repo root [`README.md`](../README.md): **View Detailed Researcher Profile and Expertise** — GitHub `#73`.
+
+## Mock database (POs)
+
+[`reference/mock_example.sql`](./reference/mock_example.sql) — see [`reference/README.md`](./reference/README.md).
+
+## Commands
+
+```bash
+npm install
+npm run dev
+npm run build
+```
+
+## Adding UI components
 
 ```bash
 npx shadcn@latest add button
 ```
 
-This will place the ui components in the `src/components` directory.
-
-## Using components
-
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button"
-```
+Components land in `src/components/ui/`.
