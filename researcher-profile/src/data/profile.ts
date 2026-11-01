@@ -1,10 +1,15 @@
+import { copy } from "../copy.ts"
 import type {
+  PreviousFilter,
   ProfileColleague,
   ProfileContract,
   ProfileLeader,
   ProfileProject,
+  ProjectStatus,
   ResearcherListItem,
   ResearcherProfile,
+  SearchHit,
+  SearchReason,
 } from "../types/researcher.ts"
 import {
   assignments,
@@ -62,6 +67,152 @@ function projectsOf(researcherId: number): ProfileProject[] {
         allocationPercentage: row.allocationPercentage,
       }
     })
+}
+
+function fold(value: string): string {
+  return value.toLocaleLowerCase("en")
+}
+
+function matchedStrings(
+  values: readonly string[],
+  foldedQuery: string
+): string[] {
+  if (foldedQuery === "") return []
+  return values.filter((value) => fold(value).includes(foldedQuery))
+}
+
+function assignedProjects(
+  researcherId: number
+): { id: number; name: string; status: ProjectStatus }[] {
+  return assignments
+    .filter((row) => row.researcherId === researcherId)
+    .map((row) => {
+      const project = lookup(projectById, row.projectId)
+      return { id: project.id, name: project.name, status: project.status }
+    })
+}
+
+export function previousProjectNames(
+  assigned: readonly { id: number; name: string; status: ProjectStatus }[]
+): string[] {
+  return assigned
+    .filter((project) => project.status === "completed")
+    .sort((left, right) => left.id - right.id)
+    .map((project) => project.name)
+}
+
+function previousNamesFor(
+  assigned: readonly { id: number; name: string; status: ProjectStatus }[],
+  previous: PreviousFilter
+): string[] {
+  if (previous === "all") return []
+  if (previous === "any") return previousProjectNames(assigned)
+  return previousProjectNames(
+    assigned.filter((project) => project.id === previous)
+  )
+}
+
+export function searchResearchers(input: {
+  query: string
+  previous: PreviousFilter
+}): SearchHit[] {
+  const foldedQuery = fold(input.query.trim())
+
+  return [...researchers]
+    .sort((left, right) => left.id - right.id)
+    .flatMap((row) => {
+      const assigned = assignedProjects(row.id)
+      const previousNames = previousNamesFor(assigned, input.previous)
+      if (input.previous !== "all" && previousNames.length === 0) return []
+
+      const topics = matchedStrings(
+        topicNames(
+          researcherTopics
+            .filter((link) => link.researcherId === row.id)
+            .map((link) => link.topicId)
+        ),
+        foldedQuery
+      )
+      const skills = matchedStrings(row.skills, foldedQuery)
+      const history = matchedStrings(row.researchHistory, foldedQuery)
+      const nameMatches =
+        foldedQuery !== "" && fold(row.name).includes(foldedQuery)
+      const textMatches =
+        foldedQuery === "" ||
+        nameMatches ||
+        topics.length > 0 ||
+        skills.length > 0 ||
+        history.length > 0
+      if (!textMatches) return []
+
+      const reasons: SearchReason[] = []
+      if (topics.length > 0) {
+        reasons.push({
+          field: "topic",
+          label: copy.researchTopics,
+          values: topics,
+        })
+      }
+      if (skills.length > 0) {
+        reasons.push({ field: "skill", label: copy.skills, values: skills })
+      }
+      if (history.length > 0) {
+        reasons.push({
+          field: "history",
+          label: copy.researchHistory,
+          values: history,
+        })
+      }
+      if (input.previous !== "all") {
+        reasons.push({
+          field: "previousProject",
+          label: copy.previousProject,
+          values: previousNames,
+        })
+      }
+
+      return [
+        {
+          id: row.id,
+          name: row.name,
+          role: row.role,
+          teamName: lookup(teamById, row.teamId).name,
+          memberStatus: row.memberStatus,
+          reasons,
+        },
+      ]
+    })
+}
+
+export function emptyResultCopy(input: {
+  query: string
+  previous: PreviousFilter
+  matchCount: number
+  completedAssignmentCount: number
+}): "No researcher matches." | "No researcher has a completed project." | null {
+  if (input.matchCount > 0) return null
+  const query = input.query.trim()
+  if (
+    query === "" &&
+    input.previous === "any" &&
+    input.completedAssignmentCount === 0
+  ) {
+    return copy.noCompletedProject
+  }
+  return copy.noMatch
+}
+
+export function completedProjectChoices(): { id: number; name: string }[] {
+  return projects
+    .filter((project) => project.status === "completed")
+    .sort((left, right) => left.id - right.id)
+    .map((project) => ({ id: project.id, name: project.name }))
+}
+
+export function countResearchersWithCompletedProjects(): number {
+  return researchers.filter(
+    (row) => previousProjectNames(assignedProjects(row.id)).length > 0
+  ).length
 }
 
 export function listResearchers(): ResearcherListItem[] {

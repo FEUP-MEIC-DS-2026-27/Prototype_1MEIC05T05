@@ -1,14 +1,20 @@
 import { expect, test } from "vitest"
 
 import {
+  completedProjectChoices,
+  countResearchersWithCompletedProjects,
+  emptyResultCopy,
   formatProfileDate,
   getResearcherProfile,
   initials,
   leaderPath,
   listResearchers,
   parseResearcherId,
+  previousProjectNames,
+  searchResearchers,
 } from "./profile.ts"
 import { copy, employmentLabel, memberStatusLabel } from "../copy.ts"
+import type { PreviousFilter } from "../types/researcher.ts"
 
 test("joins the three mock researchers", () => {
   expect(listResearchers().map((row) => row.id)).toEqual([1, 2, 3, 4])
@@ -143,4 +149,289 @@ test("empty copy matches the spec", () => {
   expect(copy.notFound).toBe("Researcher not found")
   expect(memberStatusLabel.former).toBe("Former")
   expect(employmentLabel.scholarship).toBe("Scholarship")
+})
+
+test("search copy matches the spec", () => {
+  expect(copy.search).toBe("Search")
+  expect(copy.searchPlaceholder).toBe("Name, topic, skill, or expertise")
+  expect(copy.previousProjects).toBe("Previous projects")
+  expect(copy.allResearchers).toBe("All researchers")
+  expect(copy.anyCompletedProject).toBe("Any completed project")
+  expect(copy.noMatch).toBe("No researcher matches.")
+  expect(copy.noCompletedProject).toBe("No researcher has a completed project.")
+  expect(copy.previousProject).toBe("Previous project")
+})
+
+test("searches the directory from the spec table", () => {
+  const ids = (query: string, previous: PreviousFilter) =>
+    searchResearchers({ query, previous }).map((hit) => hit.id)
+
+  expect(ids("", "all")).toEqual([1, 2, 3, 4])
+  expect(
+    searchResearchers({ query: "", previous: "all" }).every(
+      (hit) => hit.reasons.length === 0
+    )
+  ).toBe(true)
+
+  const python = searchResearchers({ query: "Python", previous: "all" })
+  expect(python.map((hit) => hit.id)).toEqual([1, 2])
+  expect(python[0].reasons).toEqual([
+    { field: "skill", label: copy.skills, values: ["Python"] },
+  ])
+  expect(python[1].reasons).toEqual([
+    { field: "skill", label: copy.skills, values: ["Python"] },
+  ])
+
+  expect(
+    searchResearchers({ query: "Healthcare", previous: "all" })
+  ).toMatchObject([
+    {
+      id: 1,
+      reasons: [
+        {
+          field: "history",
+          label: copy.researchHistory,
+          values: ["Machine Learning for Healthcare"],
+        },
+      ],
+    },
+  ])
+
+  expect(
+    searchResearchers({ query: "Data Science", previous: "all" }).map((hit) => [
+      hit.id,
+      hit.reasons,
+    ])
+  ).toEqual([
+    [
+      1,
+      [
+        {
+          field: "topic",
+          label: copy.researchTopics,
+          values: ["Data Science"],
+        },
+      ],
+    ],
+    [
+      4,
+      [
+        {
+          field: "topic",
+          label: copy.researchTopics,
+          values: ["Data Science"],
+        },
+      ],
+    ],
+  ])
+
+  expect(
+    searchResearchers({ query: "Data", previous: "all" }).map((hit) => [
+      hit.id,
+      hit.reasons,
+    ])
+  ).toEqual([
+    [
+      1,
+      [
+        {
+          field: "topic",
+          label: copy.researchTopics,
+          values: ["Data Science"],
+        },
+        {
+          field: "history",
+          label: copy.researchHistory,
+          values: ["Data Analytics"],
+        },
+      ],
+    ],
+    [
+      4,
+      [
+        {
+          field: "topic",
+          label: copy.researchTopics,
+          values: ["Data Science"],
+        },
+      ],
+    ],
+  ])
+
+  expect(
+    searchResearchers({ query: "Computer Vision", previous: "all" })
+  ).toMatchObject([
+    {
+      id: 3,
+      reasons: [
+        {
+          field: "topic",
+          label: copy.researchTopics,
+          values: ["Computer Vision"],
+        },
+        { field: "skill", label: copy.skills, values: ["Computer Vision"] },
+        {
+          field: "history",
+          label: copy.researchHistory,
+          values: ["Computer Vision"],
+        },
+      ],
+    },
+  ])
+
+  const joao = searchResearchers({ query: "joão", previous: "all" })
+  expect(joao.map((hit) => hit.id)).toEqual([2])
+  expect(joao[0].reasons).toEqual([])
+
+  expect(ids("joao", "all")).toEqual([])
+  expect(ids("HumanISE", "all")).toEqual([])
+  expect(ids("MedVis", "all")).toEqual([])
+  expect(ids("", 99)).toEqual([])
+
+  expect(searchResearchers({ query: "", previous: "any" })).toMatchObject([
+    {
+      id: 4,
+      reasons: [
+        {
+          field: "previousProject",
+          label: copy.previousProject,
+          values: ["MedVis"],
+        },
+      ],
+    },
+  ])
+  expect(searchResearchers({ query: "", previous: 3 })).toMatchObject([
+    {
+      id: 4,
+      reasons: [
+        {
+          field: "previousProject",
+          label: copy.previousProject,
+          values: ["MedVis"],
+        },
+      ],
+    },
+  ])
+  expect(ids("", 4)).toEqual([])
+  expect(ids("Python", "any")).toEqual([])
+
+  expect(searchResearchers({ query: "Statistics", previous: 3 })).toMatchObject(
+    [
+      {
+        id: 4,
+        reasons: [
+          { field: "skill", label: copy.skills, values: ["Statistics"] },
+          {
+            field: "previousProject",
+            label: copy.previousProject,
+            values: ["MedVis"],
+          },
+        ],
+      },
+    ]
+  )
+})
+
+test("normalizes case and surrounding space", () => {
+  expect(
+    searchResearchers({ query: "python", previous: "all" }).map((hit) => hit.id)
+  ).toEqual([1, 2])
+  expect(
+    searchResearchers({ query: "  Python  ", previous: "all" }).map(
+      (hit) => hit.id
+    )
+  ).toEqual([1, 2])
+})
+
+test("treats a whitespace query as no query", () => {
+  const hits = searchResearchers({ query: "   ", previous: "all" })
+  expect(hits.map((hit) => hit.id)).toEqual([1, 2, 3, 4])
+  expect(hits.every((hit) => hit.reasons.length === 0)).toBe(true)
+})
+
+test("ignores role, team, and internal extra spaces", () => {
+  expect(searchResearchers({ query: "PhD", previous: "all" })).toEqual([])
+  expect(searchResearchers({ query: "Team", previous: "all" })).toEqual([])
+  expect(
+    searchResearchers({ query: "Machine  Learning", previous: "all" })
+  ).toEqual([])
+})
+
+test("orders every matched field", () => {
+  expect(
+    searchResearchers({ query: "Machine", previous: "all" })
+  ).toMatchObject([
+    {
+      id: 1,
+      reasons: [
+        { field: "skill", label: copy.skills, values: ["Machine Learning"] },
+        {
+          field: "history",
+          label: copy.researchHistory,
+          values: ["Machine Learning for Healthcare"],
+        },
+      ],
+    },
+  ])
+})
+
+test("previous project names drop active work", () => {
+  expect(
+    previousProjectNames([
+      { id: 1, name: "HumanISE", status: "active" },
+      { id: 4, name: "Coastal Survey", status: "completed" },
+      { id: 3, name: "MedVis", status: "completed" },
+    ])
+  ).toEqual(["MedVis", "Coastal Survey"])
+})
+
+test("lists completed projects and counts assignees", () => {
+  expect(completedProjectChoices()).toEqual([
+    { id: 3, name: "MedVis" },
+    { id: 4, name: "Coastal Survey" },
+  ])
+  expect(countResearchersWithCompletedProjects()).toBe(1)
+})
+
+test("picks the empty sentence", () => {
+  expect(
+    emptyResultCopy({
+      query: "",
+      previous: "any",
+      matchCount: 0,
+      completedAssignmentCount: 0,
+    })
+  ).toBe(copy.noCompletedProject)
+  expect(
+    emptyResultCopy({
+      query: "  ",
+      previous: "any",
+      matchCount: 0,
+      completedAssignmentCount: 0,
+    })
+  ).toBe(copy.noCompletedProject)
+  expect(
+    emptyResultCopy({
+      query: "",
+      previous: "all",
+      matchCount: 0,
+      completedAssignmentCount: 0,
+    })
+  ).toBe(copy.noMatch)
+  expect(
+    emptyResultCopy({
+      query: "Python",
+      previous: "any",
+      matchCount: 0,
+      completedAssignmentCount: 1,
+    })
+  ).toBe(copy.noMatch)
+  expect(
+    emptyResultCopy({
+      query: "",
+      previous: "any",
+      matchCount: 1,
+      completedAssignmentCount: 0,
+    })
+  ).toBeNull()
 })

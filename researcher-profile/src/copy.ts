@@ -20,6 +20,14 @@ export const copy: {
   noProject: "No project assignment"
   noColleagues: "No other members on this team"
   noContract: "No contract on file"
+  search: "Search"
+  searchPlaceholder: "Name, topic, skill, or expertise"
+  previousProjects: "Previous projects"
+  allResearchers: "All researchers"
+  anyCompletedProject: "Any completed project"
+  noMatch: "No researcher matches."
+  noCompletedProject: "No researcher has a completed project."
+  previousProject: "Previous project"
 } = {
   product: "HumanISE.info",
   researchers: "Researchers",
@@ -35,6 +43,14 @@ export const copy: {
   noProject: "No project assignment",
   noColleagues: "No other members on this team",
   noContract: "No contract on file",
+  search: "Search",
+  searchPlaceholder: "Name, topic, skill, or expertise",
+  previousProjects: "Previous projects",
+  allResearchers: "All researchers",
+  anyCompletedProject: "Any completed project",
+  noMatch: "No researcher matches.",
+  noCompletedProject: "No researcher has a completed project.",
+  previousProject: "Previous project",
 }
 
 export const memberStatusLabel: Record<MemberStatus, "Active" | "Former"> = {
