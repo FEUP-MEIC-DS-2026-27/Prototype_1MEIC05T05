@@ -11,6 +11,21 @@ export type ResearcherListItem = {
   memberStatus: MemberStatus
 }
 
+export type PreviousFilter = "all" | "any" | number
+
+export type SearchReason = {
+  field: "topic" | "skill" | "history" | "previousProject"
+  label: string
+  values: string[]
+}
+
+export type SearchHit = ResearcherListItem & { reasons: SearchReason[] }
+
+export type SearchSuggestion = {
+  field: "name" | "topic" | "skill" | "history"
+  label: string
+}
+
 export type ProfileLeader = {
   id: number
   name: string
