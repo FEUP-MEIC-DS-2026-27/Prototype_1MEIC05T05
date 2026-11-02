@@ -20,5 +20,6 @@ As a user, I want to search and filter researchers by name, research topic, skil
 
 ```
 cd researcher-profile
+npm install
 npm run dev
 ```
