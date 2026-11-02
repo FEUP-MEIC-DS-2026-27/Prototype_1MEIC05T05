@@ -26,18 +26,24 @@ import type { PreviousFilter } from "@/types/researcher.ts"
 const controlFocus =
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 
+const chipClass = `inline-flex h-8 max-w-full items-center rounded-lg border border-border bg-background px-2.5 text-sm text-foreground transition-colors duration-150 ease-out hover:bg-muted active:bg-accent motion-reduce:transition-none ${controlFocus}`
+
 const suggestionListId = "researcher-suggestions"
 
 export function ResearcherIndex() {
   const [query, setQuery] = useState("")
   const [previous, setPrevious] = useState<PreviousFilter>("all")
   const [searchFocused, setSearchFocused] = useState(false)
-  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false)
+  const [escapeDismissed, setEscapeDismissed] = useState(false)
+  const [pickDismissed, setPickDismissed] = useState(false)
   const [activeSuggestion, setActiveSuggestion] = useState(0)
   const results = searchResearchers({ query, previous })
   const suggestions = searchSuggestions(query)
   const suggestionsOpen =
-    searchFocused && !suggestionsDismissed && suggestions.length > 0
+    searchFocused &&
+    !escapeDismissed &&
+    !pickDismissed &&
+    suggestions.length > 0
   const activeSuggestionIndex = suggestionsOpen
     ? Math.min(activeSuggestion, suggestions.length - 1)
     : 0
@@ -65,7 +71,7 @@ export function ResearcherIndex() {
 
   function pickSuggestion(label: string) {
     setQuery(label)
-    setSuggestionsDismissed(true)
+    setPickDismissed(true)
     setActiveSuggestion(0)
   }
 
@@ -95,10 +101,14 @@ export function ResearcherIndex() {
               value={query}
               placeholder={copy.searchPlaceholder}
               onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
+              onBlur={() => {
+                setSearchFocused(false)
+                setEscapeDismissed(false)
+              }}
               onChange={(event) => {
                 setQuery(event.target.value)
-                setSuggestionsDismissed(false)
+                setEscapeDismissed(false)
+                setPickDismissed(false)
                 setActiveSuggestion(0)
               }}
               onKeyDown={(event) => {
@@ -123,7 +133,7 @@ export function ResearcherIndex() {
                 }
                 if (event.key === "Escape") {
                   event.preventDefault()
-                  setSuggestionsDismissed(true)
+                  setEscapeDismissed(true)
                 }
               }}
               className={controlFocus}
@@ -145,8 +155,10 @@ export function ResearcherIndex() {
                       aria-selected={selected}
                       className={`flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-left text-sm ${selected ? "bg-accent text-accent-foreground" : ""}`}
                       onMouseEnter={() => setActiveSuggestion(index)}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => pickSuggestion(suggestion.label)}
+                      onPointerDown={(event) => {
+                        event.preventDefault()
+                        pickSuggestion(suggestion.label)
+                      }}
                     >
                       {suggestion.label}
                     </div>
@@ -196,7 +208,7 @@ export function ResearcherIndex() {
               type="button"
               aria-label={`${copy.removeSearch}: ${trimmedQuery}`}
               onClick={() => setQuery("")}
-              className={`inline-flex h-8 max-w-full items-center rounded-lg border border-border bg-background px-2.5 text-sm text-foreground transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:bg-accent motion-reduce:transition-none ${controlFocus}`}
+              className={chipClass}
             >
               <span className="truncate">
                 {copy.search}: {trimmedQuery}
@@ -208,7 +220,7 @@ export function ResearcherIndex() {
               type="button"
               aria-label={`${copy.removePrevious}: ${previousLabel}`}
               onClick={() => setPrevious("all")}
-              className={`inline-flex h-8 max-w-full items-center rounded-lg border border-border bg-background px-2.5 text-sm text-foreground transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:bg-accent motion-reduce:transition-none ${controlFocus}`}
+              className={chipClass}
             >
               <span className="truncate">
                 {copy.previousProjects}: {previousLabel}
