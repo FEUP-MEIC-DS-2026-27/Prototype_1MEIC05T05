@@ -28,6 +28,10 @@ export const copy: {
   noMatch: "No researcher matches."
   noCompletedProject: "No researcher has a completed project."
   previousProject: "Previous project"
+  suggestions: "Suggestions"
+  recoveryHint: "Search matches a name, topic, skill, or line of expertise. It does not match project names."
+  removeSearch: "Remove search"
+  removePrevious: "Remove previous project"
 } = {
   product: "HumanISE.info",
   researchers: "Researchers",
@@ -51,6 +55,11 @@ export const copy: {
   noMatch: "No researcher matches.",
   noCompletedProject: "No researcher has a completed project.",
   previousProject: "Previous project",
+  suggestions: "Suggestions",
+  recoveryHint:
+    "Search matches a name, topic, skill, or line of expertise. It does not match project names.",
+  removeSearch: "Remove search",
+  removePrevious: "Remove previous project",
 }
 
 export const memberStatusLabel: Record<MemberStatus, "Active" | "Former"> = {

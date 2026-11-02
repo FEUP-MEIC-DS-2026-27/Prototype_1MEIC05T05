@@ -11,7 +11,9 @@ import {
   listResearchers,
   parseResearcherId,
   previousProjectNames,
+  resultSummary,
   searchResearchers,
+  searchSuggestions,
 } from "./profile.ts"
 import { copy, employmentLabel, memberStatusLabel } from "../copy.ts"
 import type { PreviousFilter } from "../types/researcher.ts"
@@ -434,4 +436,65 @@ test("picks the empty sentence", () => {
       completedAssignmentCount: 0,
     })
   ).toBeNull()
+})
+
+test("search discovery copy matches the addendum", () => {
+  expect(copy.suggestions).toBe("Suggestions")
+  expect(copy.recoveryHint).toBe(
+    "Search matches a name, topic, skill, or line of expertise. It does not match project names."
+  )
+  expect(copy.removeSearch).toBe("Remove search")
+  expect(copy.removePrevious).toBe("Remove previous project")
+})
+
+test("suggests stored phrases that contain the query", () => {
+  expect(searchSuggestions("py")).toEqual([{ field: "skill", label: "Python" }])
+  expect(searchSuggestions("data")).toEqual([
+    { field: "topic", label: "Data Science" },
+    { field: "history", label: "Data Analytics" },
+  ])
+  expect(searchSuggestions("joão")).toEqual([
+    { field: "name", label: "João Costa" },
+  ])
+})
+
+test("collapses a repeated phrase to the first field", () => {
+  expect(searchSuggestions("Computer Vision")).toEqual([
+    { field: "topic", label: "Computer Vision" },
+  ])
+})
+
+test("caps suggestions at eight", () => {
+  expect(searchSuggestions("a")).toEqual([
+    { field: "name", label: "Ana Silva" },
+    { field: "name", label: "João Costa" },
+    { field: "name", label: "Maria Ferreira" },
+    { field: "name", label: "Rita Oliveira" },
+    { field: "topic", label: "Artificial Intelligence" },
+    { field: "topic", label: "Data Science" },
+    { field: "skill", label: "Machine Learning" },
+    { field: "skill", label: "Statistics" },
+  ])
+})
+
+test("ignores project names", () => {
+  expect(searchSuggestions("MedVis")).toEqual([])
+  expect(searchSuggestions("HumanISE")).toEqual([])
+})
+
+test("folds suggestions without dropping accents", () => {
+  expect(searchSuggestions("joao")).toEqual([])
+  expect(searchSuggestions("  Python  ")).toEqual([
+    { field: "skill", label: "Python" },
+  ])
+})
+
+test("treats a whitespace query as no suggestions", () => {
+  expect(searchSuggestions("   ")).toEqual([])
+})
+
+test("counts the visible rows", () => {
+  expect(resultSummary(2, 4)).toBe("2 of 4 researchers")
+  expect(resultSummary(4, 4)).toBe("4 of 4 researchers")
+  expect(resultSummary(0, 4)).toBe("0 of 4 researchers")
 })

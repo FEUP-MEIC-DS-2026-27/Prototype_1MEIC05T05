@@ -21,6 +21,11 @@ export type SearchReason = {
 
 export type SearchHit = ResearcherListItem & { reasons: SearchReason[] }
 
+export type SearchSuggestion = {
+  field: "name" | "topic" | "skill" | "history"
+  label: string
+}
+
 export type ProfileLeader = {
   id: number
   name: string

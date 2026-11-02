@@ -10,6 +10,7 @@ import type {
   ResearcherProfile,
   SearchHit,
   SearchReason,
+  SearchSuggestion,
 } from "../types/researcher.ts"
 import {
   assignments,
@@ -182,6 +183,59 @@ export function searchResearchers(input: {
         },
       ]
     })
+}
+
+const SUGGESTION_CAP = 8
+
+function byId<T extends { id: number }>(left: T, right: T): number {
+  return left.id - right.id
+}
+
+function suggestionCandidates(): SearchSuggestion[] {
+  const names: SearchSuggestion[] = [...researchers]
+    .sort(byId)
+    .map((row) => ({ field: "name", label: row.name }))
+
+  const topicIds = [
+    ...new Set(researcherTopics.map((link) => link.topicId)),
+  ].sort((left, right) => left - right)
+  const linkedTopics: SearchSuggestion[] = topicIds.map((id) => ({
+    field: "topic",
+    label: lookup(topicById, id).name,
+  }))
+
+  const orderedResearchers = [...researchers].sort(byId)
+  const skills: SearchSuggestion[] = orderedResearchers.flatMap((row) =>
+    row.skills.map((label) => ({ field: "skill", label }))
+  )
+  const history: SearchSuggestion[] = orderedResearchers.flatMap((row) =>
+    row.researchHistory.map((label) => ({ field: "history", label }))
+  )
+
+  return [...names, ...linkedTopics, ...skills, ...history]
+}
+
+export function searchSuggestions(query: string): SearchSuggestion[] {
+  const foldedQuery = fold(query.trim())
+  if (foldedQuery === "") return []
+
+  const seen = new Set<string>()
+  const suggestions: SearchSuggestion[] = []
+
+  for (const candidate of suggestionCandidates()) {
+    const foldedLabel = fold(candidate.label)
+    if (seen.has(foldedLabel)) continue
+    seen.add(foldedLabel)
+    if (!foldedLabel.includes(foldedQuery)) continue
+    suggestions.push(candidate)
+    if (suggestions.length === SUGGESTION_CAP) break
+  }
+
+  return suggestions
+}
+
+export function resultSummary(shown: number, total: number): string {
+  return `${shown} of ${total} researchers`
 }
 
 export function emptyResultCopy(input: {
