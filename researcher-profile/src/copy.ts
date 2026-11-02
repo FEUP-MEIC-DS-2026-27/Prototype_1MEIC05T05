@@ -32,6 +32,14 @@ export const copy: {
   recoveryHint: "Search matches a name, topic, skill, or line of expertise. It does not match project names."
   removeSearch: "Remove search"
   removePrevious: "Remove previous project"
+  filters: "Filters"
+  refine: "Refine"
+  removeFilter: "Remove filter"
+  name: "Name"
+  showMore: "Show more"
+  searchHistory: "Search research history"
+  searchProjects: "Search previous projects"
+  noFacetMatches: "No matches."
 } = {
   product: "HumanISE.info",
   researchers: "Researchers",
@@ -60,6 +68,14 @@ export const copy: {
     "Search matches a name, topic, skill, or line of expertise. It does not match project names.",
   removeSearch: "Remove search",
   removePrevious: "Remove previous project",
+  filters: "Filters",
+  refine: "Refine",
+  removeFilter: "Remove filter",
+  name: "Name",
+  showMore: "Show more",
+  searchHistory: "Search research history",
+  searchProjects: "Search previous projects",
+  noFacetMatches: "No matches.",
 }
 
 export const memberStatusLabel: Record<MemberStatus, "Active" | "Former"> = {
