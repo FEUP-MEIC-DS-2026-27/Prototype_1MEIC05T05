@@ -8,6 +8,9 @@ import type {
   ProjectStatus,
   ResearcherListItem,
   ResearcherProfile,
+  FacetCatalog,
+  FacetFilters,
+  FacetChoice,
   SearchHit,
   SearchReason,
   SearchSuggestion,
@@ -102,38 +105,77 @@ export function previousProjectNames(
     .map((project) => project.name)
 }
 
-function previousNamesFor(
-  assigned: readonly { id: number; name: string; status: ProjectStatus }[],
+function topicsOf(researcherId: number): string[] {
+  return topicNames(
+    researcherTopics
+      .filter((link) => link.researcherId === researcherId)
+      .map((link) => link.topicId)
+  )
+}
+
+function completedSelection(input: {
   previous: PreviousFilter
+  facets?: FacetFilters
+}): "all" | "any" | readonly number[] {
+  if (input.facets) return input.facets.completed
+  if (input.previous === "all" || input.previous === "any") return input.previous
+  return [input.previous]
+}
+
+function namesForCompleted(
+  assigned: readonly { id: number; name: string; status: ProjectStatus }[],
+  completed: "all" | "any" | readonly number[]
 ): string[] {
-  if (previous === "all") return []
-  if (previous === "any") return previousProjectNames(assigned)
-  return previousProjectNames(
-    assigned.filter((project) => project.id === previous)
+  if (completed === "all") return []
+  if (completed === "any") return previousProjectNames(assigned)
+  const ids = new Set(completed)
+  return previousProjectNames(assigned.filter((project) => ids.has(project.id)))
+}
+
+function holdsAny(values: readonly string[], selected: readonly string[]): boolean {
+  if (selected.length === 0) return true
+  const folded = new Set(values.map((value) => fold(value)))
+  return selected.some((value) => folded.has(fold(value)))
+}
+
+function reasonValues(
+  stored: readonly string[],
+  textMatched: readonly string[],
+  selected: readonly string[]
+): string[] {
+  const text = new Set(textMatched.map((value) => fold(value)))
+  const picked = new Set(selected.map((value) => fold(value)))
+  return stored.filter(
+    (value) => text.has(fold(value)) || picked.has(fold(value))
   )
 }
 
 export function searchResearchers(input: {
   query: string
   previous: PreviousFilter
+  facets?: FacetFilters
 }): SearchHit[] {
   const foldedQuery = fold(input.query.trim())
+  const facets = input.facets ?? {
+    topics: [],
+    skills: [],
+    history: [],
+    completed: completedSelection(input),
+  }
+  const completed = completedSelection({ previous: input.previous, facets: input.facets })
 
   return [...researchers]
     .sort((left, right) => left.id - right.id)
     .flatMap((row) => {
+      const storedTopics = topicsOf(row.id)
       const assigned = assignedProjects(row.id)
-      const previousNames = previousNamesFor(assigned, input.previous)
-      if (input.previous !== "all" && previousNames.length === 0) return []
+      const previousNames = namesForCompleted(assigned, completed)
+      if (completed !== "all" && previousNames.length === 0) return []
+      if (!holdsAny(storedTopics, facets.topics)) return []
+      if (!holdsAny(row.skills, facets.skills)) return []
+      if (!holdsAny(row.researchHistory, facets.history)) return []
 
-      const topics = matchedStrings(
-        topicNames(
-          researcherTopics
-            .filter((link) => link.researcherId === row.id)
-            .map((link) => link.topicId)
-        ),
-        foldedQuery
-      )
+      const topics = matchedStrings(storedTopics, foldedQuery)
       const skills = matchedStrings(row.skills, foldedQuery)
       const history = matchedStrings(row.researchHistory, foldedQuery)
       const nameMatches =
@@ -146,25 +188,36 @@ export function searchResearchers(input: {
         history.length > 0
       if (!textMatches) return []
 
+      const topicValues = reasonValues(storedTopics, topics, facets.topics)
+      const skillValues = reasonValues(row.skills, skills, facets.skills)
+      const historyValues = reasonValues(
+        row.researchHistory,
+        history,
+        facets.history
+      )
       const reasons: SearchReason[] = []
-      if (topics.length > 0) {
+      if (topicValues.length > 0) {
         reasons.push({
           field: "topic",
           label: copy.researchTopics,
-          values: topics,
+          values: topicValues,
         })
       }
-      if (skills.length > 0) {
-        reasons.push({ field: "skill", label: copy.skills, values: skills })
+      if (skillValues.length > 0) {
+        reasons.push({
+          field: "skill",
+          label: copy.skills,
+          values: skillValues,
+        })
       }
-      if (history.length > 0) {
+      if (historyValues.length > 0) {
         reasons.push({
           field: "history",
           label: copy.researchHistory,
-          values: history,
+          values: historyValues,
         })
       }
-      if (input.previous !== "all") {
+      if (completed !== "all") {
         reasons.push({
           field: "previousProject",
           label: copy.previousProject,
@@ -183,6 +236,105 @@ export function searchResearchers(input: {
         },
       ]
     })
+}
+
+function choice(
+  label: string,
+  count: number,
+  value = label
+): { value: string; label: string; count: number } {
+  return { value, label, count }
+}
+
+function countWith(query: string, facets: FacetFilters): number {
+  return searchResearchers({ query, previous: "all", facets }).length
+}
+
+export function facetCatalog(input: {
+  query: string
+  facets: FacetFilters
+}): FacetCatalog {
+  const topicLabels = [
+    ...new Set(researcherTopics.map((link) => link.topicId)),
+  ]
+    .sort((left, right) => left - right)
+    .map((id) => lookup(topicById, id).name)
+  const skillLabels = uniqueLabels(
+    [...researchers].sort(byId).map((row) => row.skills)
+  )
+  const historyLabels = uniqueLabels(
+    [...researchers].sort(byId).map((row) => row.researchHistory)
+  )
+
+  return {
+    topics: topicLabels.map((label) =>
+      choice(
+        label,
+        countWith(input.query, { ...input.facets, topics: [label] })
+      )
+    ),
+    skills: skillLabels.map((label) =>
+      choice(
+        label,
+        countWith(input.query, { ...input.facets, skills: [label] })
+      )
+    ),
+    history: historyLabels.map((label) =>
+      choice(
+        label,
+        countWith(input.query, { ...input.facets, history: [label] })
+      )
+    ),
+    anyCompleted: choice(
+      copy.anyCompletedProject,
+      countWith(input.query, { ...input.facets, completed: "any" }),
+      "any"
+    ),
+    projects: completedProjectChoices().map((project) =>
+      choice(
+        project.name,
+        countWith(input.query, { ...input.facets, completed: [project.id] }),
+        String(project.id)
+      )
+    ),
+  }
+}
+
+export const FACET_PAGE = 5
+
+export function facetWindow(
+  choices: readonly FacetChoice[],
+  input: { query: string; limit: number; selected: readonly string[] }
+): { visible: FacetChoice[]; remaining: number } {
+  const needle = fold(input.query.trim())
+  const sorted = [...choices].sort(
+    (left, right) =>
+      right.count - left.count || left.label.localeCompare(right.label, "en")
+  )
+  const matched =
+    needle === ""
+      ? sorted
+      : sorted.filter((item) => fold(item.label).includes(needle))
+  const selected = new Set(input.selected)
+  const shown = new Set(matched.slice(0, input.limit).map((item) => item.value))
+  const visible = matched.filter(
+    (item) => shown.has(item.value) || selected.has(item.value)
+  )
+  return { visible, remaining: matched.length - visible.length }
+}
+
+function uniqueLabels(groups: readonly (readonly string[])[]): string[] {
+  const seen = new Set<string>()
+  const labels: string[] = []
+  for (const group of groups) {
+    for (const label of group) {
+      const key = fold(label)
+      if (seen.has(key)) continue
+      seen.add(key)
+      labels.push(label)
+    }
+  }
+  return labels
 }
 
 const SUGGESTION_CAP = 8
@@ -211,8 +363,17 @@ function suggestionCandidates(): SearchSuggestion[] {
   const history: SearchSuggestion[] = orderedResearchers.flatMap((row) =>
     row.researchHistory.map((label) => ({ field: "history", label }))
   )
+  const projectSuggestions: SearchSuggestion[] = completedProjectChoices().map(
+    (project) => ({ field: "previousProject", label: project.name })
+  )
 
-  return [...names, ...linkedTopics, ...skills, ...history]
+  return [
+    ...names,
+    ...linkedTopics,
+    ...skills,
+    ...history,
+    ...projectSuggestions,
+  ]
 }
 
 export function searchSuggestions(query: string): SearchSuggestion[] {
@@ -223,7 +384,7 @@ export function searchSuggestions(query: string): SearchSuggestion[] {
   const suggestions: SearchSuggestion[] = []
 
   for (const candidate of suggestionCandidates()) {
-    const foldedLabel = fold(candidate.label)
+    const foldedLabel = `${candidate.field}:${fold(candidate.label)}`
     if (seen.has(foldedLabel)) continue
     seen.add(foldedLabel)
     if (!foldedLabel.includes(foldedQuery)) continue

@@ -10,13 +10,15 @@ import {
   leaderPath,
   listResearchers,
   parseResearcherId,
+  facetCatalog,
+  facetWindow,
   previousProjectNames,
   resultSummary,
   searchResearchers,
   searchSuggestions,
 } from "./profile.ts"
 import { copy, employmentLabel, memberStatusLabel } from "../copy.ts"
-import type { PreviousFilter } from "../types/researcher.ts"
+import type { FacetFilters, PreviousFilter } from "../types/researcher.ts"
 
 test("joins the three mock researchers", () => {
   expect(listResearchers().map((row) => row.id)).toEqual([1, 2, 3, 4])
@@ -458,9 +460,11 @@ test("suggests stored phrases that contain the query", () => {
   ])
 })
 
-test("collapses a repeated phrase to the first field", () => {
+test("keeps the same phrase in each field it belongs to", () => {
   expect(searchSuggestions("Computer Vision")).toEqual([
     { field: "topic", label: "Computer Vision" },
+    { field: "skill", label: "Computer Vision" },
+    { field: "history", label: "Computer Vision" },
   ])
 })
 
@@ -477,8 +481,10 @@ test("caps suggestions at eight", () => {
   ])
 })
 
-test("ignores project names", () => {
-  expect(searchSuggestions("MedVis")).toEqual([])
+test("suggests a completed project and ignores an active one", () => {
+  expect(searchSuggestions("MedVis")).toEqual([
+    { field: "previousProject", label: "MedVis" },
+  ])
   expect(searchSuggestions("HumanISE")).toEqual([])
 })
 
@@ -491,6 +497,101 @@ test("folds suggestions without dropping accents", () => {
 
 test("treats a whitespace query as no suggestions", () => {
   expect(searchSuggestions("   ")).toEqual([])
+})
+
+const noFacets: FacetFilters = {
+  topics: [],
+  skills: [],
+  history: [],
+  completed: "all",
+}
+
+test("facets match any value in a group and every group at once", () => {
+  const ids = (facets: FacetFilters) =>
+    searchResearchers({ query: "", previous: "all", facets }).map((hit) => hit.id)
+
+  expect(
+    ids({ ...noFacets, skills: ["Python", "Statistics"] })
+  ).toEqual([1, 2, 4])
+  expect(ids({ ...noFacets, topics: ["Data Science"], skills: ["Statistics"] })).toEqual([
+    4,
+  ])
+  expect(ids({ ...noFacets, skills: ["Python"], completed: "any" })).toEqual([])
+  expect(ids({ ...noFacets, completed: [3, 4] })).toEqual([4])
+  expect(
+    searchResearchers({ query: "martelo", previous: "all", facets: noFacets })
+  ).toEqual([])
+})
+
+test("a selected facet is a reason when the query is blank", () => {
+  expect(
+    searchResearchers({
+      query: "",
+      previous: "all",
+      facets: { ...noFacets, topics: ["Data Science"] },
+    })
+  ).toMatchObject([
+    {
+      id: 1,
+      reasons: [
+        { field: "topic", label: copy.researchTopics, values: ["Data Science"] },
+      ],
+    },
+    {
+      id: 4,
+      reasons: [
+        { field: "topic", label: copy.researchTopics, values: ["Data Science"] },
+      ],
+    },
+  ])
+})
+
+test("facet counts ignore the same group and keep the others", () => {
+  const catalog = facetCatalog({
+    query: "",
+    facets: { ...noFacets, skills: ["Python"] },
+  })
+
+  expect(catalog.skills.find((item) => item.label === "Python")?.count).toBe(2)
+  expect(catalog.skills.find((item) => item.label === "Statistics")?.count).toBe(1)
+  expect(catalog.topics.find((item) => item.label === "Data Science")?.count).toBe(1)
+  expect(catalog.anyCompleted.count).toBe(0)
+  expect(catalog.projects.find((item) => item.label === "MedVis")?.count).toBe(0)
+  expect(catalog.projects.map((item) => item.label)).toEqual([
+    "MedVis",
+    "Coastal Survey",
+  ])
+})
+
+test("facet window keeps common values first and a selected value in view", () => {
+  const choices = [
+    { value: "rare", label: "Rare", count: 1 },
+    { value: "common", label: "Common", count: 4 },
+    { value: "med", label: "MedVis", count: 2 },
+    { value: "other", label: "Other", count: 1 },
+    { value: "zeta", label: "Zeta", count: 1 },
+    { value: "alpha", label: "Alpha", count: 1 },
+  ]
+
+  expect(
+    facetWindow(choices, { query: "", limit: 5, selected: [] }).visible.map(
+      (item) => item.label
+    )
+  ).toEqual(["Common", "MedVis", "Alpha", "Other", "Rare"])
+
+  const kept = facetWindow(choices, {
+    query: "",
+    limit: 5,
+    selected: ["zeta"],
+  })
+  expect(kept.visible.map((item) => item.value)).toContain("zeta")
+  expect(kept.remaining).toBe(0)
+
+  expect(
+    facetWindow(choices, { query: "med", limit: 5, selected: [] }).visible.map(
+      (item) => item.label
+    )
+  ).toEqual(["MedVis"])
 })
 
 test("counts the visible rows", () => {

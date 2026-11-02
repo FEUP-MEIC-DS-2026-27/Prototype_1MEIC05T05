@@ -21,8 +21,29 @@ export type SearchReason = {
 
 export type SearchHit = ResearcherListItem & { reasons: SearchReason[] }
 
+export type FacetFilters = {
+  topics: readonly string[]
+  skills: readonly string[]
+  history: readonly string[]
+  completed: "all" | "any" | readonly number[]
+}
+
+export type FacetChoice = {
+  value: string
+  label: string
+  count: number
+}
+
+export type FacetCatalog = {
+  topics: FacetChoice[]
+  skills: FacetChoice[]
+  history: FacetChoice[]
+  anyCompleted: FacetChoice
+  projects: FacetChoice[]
+}
+
 export type SearchSuggestion = {
-  field: "name" | "topic" | "skill" | "history"
+  field: "name" | "topic" | "skill" | "history" | "previousProject"
   label: string
 }
 
