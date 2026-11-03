@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
+import { searchResearchersAsync } from "../api/researchers.ts"
 import { copy } from "../copy.ts"
 import {
   countResearchersWithCompletedProjects,
@@ -7,13 +8,17 @@ import {
   facetCatalog,
   listResearchers,
   resultSummary,
-  searchResearchers,
   searchSuggestions,
 } from "../data/profile.ts"
-import type { FacetFilters, SearchSuggestion } from "../types/researcher.ts"
+import type {
+  FacetFilters,
+  SearchHit,
+  SearchSuggestion,
+} from "../types/researcher.ts"
 import { activeChips, addFacet, FacetPanel } from "./FacetPanel.tsx"
 import { ResearcherResultList } from "./ResearcherResultList.tsx"
 import { SearchBar } from "./SearchBar.tsx"
+import { StatusMessage } from "./StatusMessage.tsx"
 
 const emptyFacets: FacetFilters = {
   topics: [],
@@ -22,20 +27,52 @@ const emptyFacets: FacetFilters = {
   completed: "all",
 }
 
+type SearchLoad =
+  | { status: "loading" }
+  | { status: "ready"; results: SearchHit[] }
+  | { status: "error"; message: string }
+
+function failureMessage(reason: unknown): string {
+  if (reason instanceof Error && reason.message !== "") return reason.message
+  return "Could not search researchers."
+}
+
 export function ResearcherSearchPage({ basePath }: { basePath: string }) {
   const [query, setQuery] = useState("")
   const [facets, setFacets] = useState<FacetFilters>(emptyFacets)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const results = searchResearchers({ query, previous: "all", facets })
+  const [attempt, setAttempt] = useState(0)
+  const [load, setLoad] = useState<SearchLoad>({ status: "loading" })
   const suggestions = searchSuggestions(query)
   const catalog = facetCatalog({ query, facets })
-  const emptyCopy = emptyResultCopy({
-    query,
-    previous: facets.completed === "any" ? "any" : "all",
-    matchCount: results.length,
-    completedAssignmentCount: countResearchersWithCompletedProjects(),
-  })
   const chips = activeChips(facets, setFacets)
+  const results = load.status === "ready" ? load.results : null
+  const emptyCopy =
+    results === null
+      ? null
+      : emptyResultCopy({
+          query,
+          previous: facets.completed === "any" ? "any" : "all",
+          matchCount: results.length,
+          completedAssignmentCount: countResearchersWithCompletedProjects(),
+        })
+
+  useEffect(() => {
+    let active = true
+    setLoad({ status: "loading" })
+    searchResearchersAsync({ query, previous: "all", facets }).then(
+      (hits) => {
+        if (active) setLoad({ status: "ready", results: hits })
+      },
+      (reason: unknown) => {
+        if (!active) return
+        setLoad({ status: "error", message: failureMessage(reason) })
+      }
+    )
+    return () => {
+      active = false
+    }
+  }, [query, facets, attempt])
 
   function pickSuggestion(suggestion: SearchSuggestion) {
     if (suggestion.field === "name") {
@@ -94,14 +131,26 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
               ))}
             </div>
           ) : null}
-          <p className="text-body-secondary small mb-0">
-            {resultSummary(results.length, listResearchers().length)}
-          </p>
-          <ResearcherResultList
-            results={results}
-            basePath={basePath}
-            emptyMessage={emptyCopy}
-          />
+          {load.status === "loading" ? (
+            <StatusMessage variant="loading" />
+          ) : load.status === "error" ? (
+            <StatusMessage
+              variant="error"
+              message={load.message}
+              onRetry={() => setAttempt((current) => current + 1)}
+            />
+          ) : (
+            <>
+              <p className="text-body-secondary small mb-0">
+                {resultSummary(load.results.length, listResearchers().length)}
+              </p>
+              <ResearcherResultList
+                results={load.results}
+                basePath={basePath}
+                emptyMessage={emptyCopy}
+              />
+            </>
+          )}
         </div>
       </div>
       {filtersOpen ? (

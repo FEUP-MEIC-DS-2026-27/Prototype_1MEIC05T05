@@ -1,6 +1,7 @@
-import type { ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 
+import { loadResearcherProfile } from "../api/researchers.ts"
 import { PageNotFound } from "./PageNotFound.tsx"
 import { StatusMessage } from "./StatusMessage.tsx"
 import {
@@ -12,12 +13,15 @@ import {
 } from "../copy.ts"
 import {
   formatProfileDate,
-  getResearcherProfile,
   initials,
   leaderPath,
   parseResearcherId,
 } from "../data/profile.ts"
-import type { ProfileLeader, ProfileProject } from "../types/researcher.ts"
+import type {
+  ProfileLeader,
+  ProfileProject,
+  ResearcherProfile,
+} from "../types/researcher.ts"
 
 function profileHref(basePath: string, id: number) {
   return `${basePath}/${id}`
@@ -92,14 +96,63 @@ function ProjectRow({ project }: { project: ProfileProject }) {
   )
 }
 
+type ProfileLoad =
+  | { status: "loading"; forId: number }
+  | { status: "ready"; forId: number; profile: ResearcherProfile | null }
+  | { status: "error"; forId: number; message: string }
+
+function failureMessage(reason: unknown): string {
+  if (reason instanceof Error && reason.message !== "") return reason.message
+  return "Could not load the researcher profile."
+}
+
 export function ResearcherProfilePage({ basePath }: { basePath: string }) {
   const { id } = useParams()
   const researcherId = parseResearcherId(id)
-  const profile =
-    researcherId === null ? null : getResearcherProfile(researcherId)
+  const [attempt, setAttempt] = useState(0)
+  const [load, setLoad] = useState<ProfileLoad>({
+    status: "loading",
+    forId: -1,
+  })
 
-  if (profile === null) return <PageNotFound basePath={basePath} />
+  useEffect(() => {
+    if (researcherId === null) return
+    let active = true
+    setLoad({ status: "loading", forId: researcherId })
+    loadResearcherProfile(researcherId).then(
+      (profile) => {
+        if (active) setLoad({ status: "ready", forId: researcherId, profile })
+      },
+      (reason: unknown) => {
+        if (!active) return
+        setLoad({
+          status: "error",
+          forId: researcherId,
+          message: failureMessage(reason),
+        })
+      }
+    )
+    return () => {
+      active = false
+    }
+  }, [researcherId, attempt])
 
+  if (researcherId === null) return <PageNotFound basePath={basePath} />
+  if (load.forId !== researcherId || load.status === "loading") {
+    return <StatusMessage variant="loading" />
+  }
+  if (load.status === "error") {
+    return (
+      <StatusMessage
+        variant="error"
+        message={load.message}
+        onRetry={() => setAttempt((current) => current + 1)}
+      />
+    )
+  }
+  if (load.profile === null) return <PageNotFound basePath={basePath} />
+
+  const profile = load.profile
   const contract = profile.contract
 
   return (
