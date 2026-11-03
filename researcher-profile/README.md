@@ -1,6 +1,6 @@
 # Researcher profile prototype (#73)
 
-React + TypeScript + Vite + shadcn/ui (`base-nova`).
+React + TypeScript + Rsbuild + Bootstrap.
 
 ## User story
 
@@ -18,10 +18,6 @@ npm run dev
 npm run build
 ```
 
-## Adding UI components
+## UI components
 
-```bash
-npx shadcn@latest add button
-```
-
-Components land in `src/components/ui/`.
+UI components live under `src/components/` and use Bootstrap. They do not live under `components/ui/`. Add one by creating a file in `src/components/`.
