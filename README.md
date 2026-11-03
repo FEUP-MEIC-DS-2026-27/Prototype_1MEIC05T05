@@ -12,9 +12,7 @@ As a user, I want to search and filter researchers by name, research topic, skil
 
 ## Tech Stack
 
-**front-end:** React
-
-**UI library:** https://github.com/shadcn-ui/ui
+**front-end:** Rsbuild Module Federation, Bootstrap, React 18.3.1
 
 ## Test
 
