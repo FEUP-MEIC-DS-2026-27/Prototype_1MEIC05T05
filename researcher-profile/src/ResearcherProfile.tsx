@@ -1,7 +1,7 @@
-import { Route, Routes, useParams } from "react-router-dom"
+import { Route, Routes } from "react-router-dom"
 import { PageNotFound } from "./components/PageNotFound.tsx"
 import { ResearcherProfileLayout } from "./components/ResearcherProfileLayout.tsx"
-import { parseResearcherId } from "./data/profile.ts"
+import { ResearcherProfilePage } from "./components/ResearcherProfilePage.tsx"
 import { contractVersion, type ResearcherProfileProps } from "./types.ts"
 
 /**
@@ -10,14 +10,6 @@ import { contractVersion, type ResearcherProfileProps } from "./types.ts"
  * The host supplies the router. This module does not import CSS.
  */
 export { contractVersion }
-
-function ResearcherIdPlaceholder({ basePath }: { basePath: string }) {
-  const { id } = useParams()
-  if (parseResearcherId(id) === null) {
-    return <PageNotFound basePath={basePath} />
-  }
-  return <p>Researcher profile placeholder</p>
-}
 
 export default function ResearcherProfile({
   basePath,
@@ -28,7 +20,7 @@ export default function ResearcherProfile({
         <Route index element={<p>Researcher search placeholder</p>} />
         <Route
           path=":id"
-          element={<ResearcherIdPlaceholder basePath={basePath} />}
+          element={<ResearcherProfilePage basePath={basePath} />}
         />
         <Route path="*" element={<PageNotFound basePath={basePath} />} />
       </Routes>
