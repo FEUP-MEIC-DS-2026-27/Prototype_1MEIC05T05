@@ -18,9 +18,9 @@ Shared singletons: react 18.3.1, react-dom 18.3.1, react-router-dom 7.9.6.
 
 `npm run build` writes `dist/mf-manifest.json` and `remoteEntry.js`.
 
-## Mock data
+## Mock data and backend
 
-Mock data is the default. `PUBLIC_USE_MOCK=false` turns the facade off. `PUBLIC_API_BASE` is reserved and unused.
+Mock data is the default. `PUBLIC_USE_MOCK=false` switches `src/api/researchers.ts` to HTTP calls to the FastAPI backend at `PUBLIC_API_BASE` (default `http://localhost:8000/api`). Copy `.env.example` to `.env` to set both. See the repo root [`README.md`](../README.md) for the endpoints.
 
 ## Mock database (POs)
 

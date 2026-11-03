@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { defineConfig } from "@rsbuild/core"
 import { pluginReact } from "@rsbuild/plugin-react"
@@ -23,6 +23,8 @@ type AfterEmitCompiler = {
 // Rspack's manifest writer keeps `singleton: null` and omits `strictVersion`
 // even when the federation share config sets both. Record the contract on the
 // emitted manifest, and write the same booleans into remoteEntry.js.
+// `rsbuild dev` serves from memory and writes nothing to dist/, so a missing
+// file is skipped instead of failing the dev server.
 function recordStrictSharedSingletons(compiler: AfterEmitCompiler) {
   compiler.hooks.afterEmit.tap(
     "RecordStrictSharedSingletons",
@@ -32,6 +34,7 @@ function recordStrictSharedSingletons(compiler: AfterEmitCompiler) {
 
       for (const fileName of ["mf-manifest.json", "mf-stats.json"]) {
         const filePath = join(outputPath, fileName)
+        if (!existsSync(filePath)) continue
         const document = JSON.parse(readFileSync(filePath, "utf8")) as {
           shared?: Array<{
             name?: string
@@ -48,6 +51,7 @@ function recordStrictSharedSingletons(compiler: AfterEmitCompiler) {
       }
 
       const remoteEntryPath = join(outputPath, "remoteEntry.js")
+      if (!existsSync(remoteEntryPath)) return
       const remoteEntry = readFileSync(remoteEntryPath, "utf8")
       writeFileSync(
         remoteEntryPath,

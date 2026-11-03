@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: people_teams
+    ports:
+      - "5432:5432"
+    volumes:
+      # init.sql runs only the first time the volume is created.
+      # To reset the data: docker compose down -v
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d people_teams"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/people_teams
+      # CORS: by default localhost / 127.0.0.1 on ports 3000-3006 (same as
+      # frontend/rsbuild.config.ts). To allow other origins, uncomment:
+      # CORS_ORIGINS: http://localhost:4000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
