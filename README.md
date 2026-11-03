@@ -2,13 +2,21 @@
 
 React frontend, FastAPI backend and PostgreSQL database.
 
-**User story:** View Detailed Researcher Profile and Expertise (GitHub `#73`).
-
 ```
 database/   init.sql   -> schema + sample data
 backend/    main.py    -> FastAPI app (all endpoints and SQL queries)
 frontend/   src/       -> React + TypeScript (Rsbuild, Module Federation remote)
 ```
+
+## User stories:
+
+**Search and Filter Researchers by Expertise and Projects (GitHub `#72`):** 
+
+"As a user, I want to search and filter researchers by name, research topic, skill, technological expertise or previous project, so that I can find relevant colleagues, potential collaborators and people suited to a project or research challenge."
+
+**View Detailed Researcher Profile and Expertise (GitHub `#73`):**
+
+"As a user, I want to view a researcher’s profile, including their skills, role, team, research topics and research history, so that I can understand their expertise and experience."
 
 ## Run the database and the API
 
