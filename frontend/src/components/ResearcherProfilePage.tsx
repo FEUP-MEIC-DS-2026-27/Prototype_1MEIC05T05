@@ -1,39 +1,29 @@
-import { useEffect, useState, type ReactNode } from "react"
-import { Link, useParams } from "react-router-dom"
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link, useParams } from 'react-router-dom'
 
-import { loadResearcherProfile } from "../api/researchers.ts"
-import { PageNotFound } from "./PageNotFound.tsx"
-import { StatusMessage } from "./StatusMessage.tsx"
+import { loadResearcherProfile } from '../api/researchers'
 import {
   copy,
   employmentLabel,
-  memberStatusLabel,
-  projectStatusLabel,
-  teamStatusLabel,
-} from "../copy.ts"
-import {
   formatProfileDate,
   initials,
   leaderPath,
+  memberStatusLabel,
   parseResearcherId,
-} from "../data/profile.ts"
-import type {
-  ProfileLeader,
-  ProfileProject,
-  ResearcherProfile,
-} from "../types/researcher.ts"
+  projectStatusLabel,
+  teamStatusLabel,
+  type ProfileLeader,
+  type ProfileProject,
+  type ResearcherProfile,
+} from '../shared'
+import PageNotFound from './PageNotFound'
+import StatusMessage from './StatusMessage'
 
 function profileHref(basePath: string, id: number) {
   return `${basePath}/${id}`
 }
 
-function SectionCard({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="card">
       <div className="card-header">{title}</div>
@@ -54,13 +44,7 @@ function BadgeList({ labels }: { labels: readonly string[] }) {
   )
 }
 
-function LeaderName({
-  leader,
-  basePath,
-}: {
-  leader: ProfileLeader
-  basePath: string
-}) {
+function LeaderName({ leader, basePath }: { leader: ProfileLeader; basePath: string }) {
   if (leaderPath(leader) === null) return <span>{leader.name}</span>
   return <Link to={profileHref(basePath, leader.id)}>{leader.name}</Link>
 }
@@ -70,9 +54,7 @@ function ProjectRow({ project }: { project: ProfileProject }) {
     <tr>
       <td>{project.name}</td>
       <td>
-        <span className="badge text-bg-light border">
-          {projectStatusLabel[project.status]}
-        </span>
+        <span className="badge text-bg-light border">{projectStatusLabel[project.status]}</span>
       </td>
       <td>
         <div className="d-flex align-items-center gap-2">
@@ -84,10 +66,7 @@ function ProjectRow({ project }: { project: ProfileProject }) {
             aria-valuemax={100}
             aria-label={project.name}
           >
-            <div
-              className="progress-bar"
-              style={{ width: `${project.allocationPercentage}%` }}
-            />
+            <div className="progress-bar" style={{ width: `${project.allocationPercentage}%` }} />
           </div>
           <span className="text-nowrap">{`${project.allocationPercentage}%`}</span>
         </div>
@@ -97,40 +76,40 @@ function ProjectRow({ project }: { project: ProfileProject }) {
 }
 
 type ProfileLoad =
-  | { status: "loading"; forId: number }
-  | { status: "ready"; forId: number; profile: ResearcherProfile | null }
-  | { status: "error"; forId: number; message: string }
+  | { status: 'loading'; forId: number }
+  | { status: 'ready'; forId: number; profile: ResearcherProfile | null }
+  | { status: 'error'; forId: number; message: string }
 
 function failureMessage(reason: unknown): string {
-  if (reason instanceof Error && reason.message !== "") return reason.message
-  return "Could not load the researcher profile."
+  if (reason instanceof Error && reason.message !== '') return reason.message
+  return 'Could not load the researcher profile.'
 }
 
-export function ResearcherProfilePage({ basePath }: { basePath: string }) {
+export default function ResearcherProfilePage({ basePath }: { basePath: string }) {
   const { id } = useParams()
   const researcherId = parseResearcherId(id)
   const [attempt, setAttempt] = useState(0)
   const [load, setLoad] = useState<ProfileLoad>({
-    status: "loading",
+    status: 'loading',
     forId: -1,
   })
 
   useEffect(() => {
     if (researcherId === null) return
     let active = true
-    setLoad({ status: "loading", forId: researcherId })
+    setLoad({ status: 'loading', forId: researcherId })
     loadResearcherProfile(researcherId).then(
       (profile) => {
-        if (active) setLoad({ status: "ready", forId: researcherId, profile })
+        if (active) setLoad({ status: 'ready', forId: researcherId, profile })
       },
       (reason: unknown) => {
         if (!active) return
         setLoad({
-          status: "error",
+          status: 'error',
           forId: researcherId,
           message: failureMessage(reason),
         })
-      }
+      },
     )
     return () => {
       active = false
@@ -138,17 +117,11 @@ export function ResearcherProfilePage({ basePath }: { basePath: string }) {
   }, [researcherId, attempt])
 
   if (researcherId === null) return <PageNotFound basePath={basePath} />
-  if (load.forId !== researcherId || load.status === "loading") {
+  if (load.forId !== researcherId || load.status === 'loading') {
     return <StatusMessage variant="loading" />
   }
-  if (load.status === "error") {
-    return (
-      <StatusMessage
-        variant="error"
-        message={load.message}
-        onRetry={() => setAttempt((current) => current + 1)}
-      />
-    )
+  if (load.status === 'error') {
+    return <StatusMessage variant="error" message={load.message} onRetry={() => setAttempt((current) => current + 1)} />
   }
   if (load.profile === null) return <PageNotFound basePath={basePath} />
 
@@ -157,25 +130,18 @@ export function ResearcherProfilePage({ basePath }: { basePath: string }) {
 
   return (
     <div className="d-flex flex-column gap-3">
-      <Link to={basePath || "/"}>{copy.researchers}</Link>
+      <Link to={basePath || '/'}>{copy.researchers}</Link>
       <div className="card">
         <div className="card-body d-flex align-items-start gap-3">
-          <span
-            className="badge rounded-pill text-bg-secondary fs-6"
-            aria-hidden="true"
-          >
+          <span className="badge rounded-pill text-bg-secondary fs-6" aria-hidden="true">
             {initials(profile.name)}
           </span>
           <div>
             <h1 className="h3 mb-1">{profile.name}</h1>
             <p className="text-body-secondary mb-2">{profile.role}</p>
             <div className="d-flex flex-wrap gap-2">
-              <span className="badge text-bg-primary">
-                {memberStatusLabel[profile.memberStatus]}
-              </span>
-              <span className="badge text-bg-light border">
-                {employmentLabel[profile.employmentType]}
-              </span>
+              <span className="badge text-bg-primary">{memberStatusLabel[profile.memberStatus]}</span>
+              <span className="badge text-bg-light border">{employmentLabel[profile.employmentType]}</span>
             </div>
           </div>
         </div>
@@ -231,9 +197,7 @@ export function ResearcherProfilePage({ basePath }: { basePath: string }) {
             <div className="card-body d-flex flex-column gap-3">
               <div className="d-flex flex-wrap align-items-center gap-2">
                 <p className="fw-medium mb-0">{profile.team.name}</p>
-                <span className="badge text-bg-light border">
-                  {teamStatusLabel[profile.team.status]}
-                </span>
+                <span className="badge text-bg-light border">{teamStatusLabel[profile.team.status]}</span>
               </div>
               <p className="mb-0">{profile.team.description}</p>
               <BadgeList labels={profile.team.topics} />
@@ -251,16 +215,9 @@ export function ResearcherProfilePage({ basePath }: { basePath: string }) {
             ) : (
               <ul className="list-group list-group-flush">
                 {profile.colleagues.map((colleague) => (
-                  <li
-                    key={colleague.id}
-                    className="list-group-item d-flex flex-wrap justify-content-between gap-2"
-                  >
-                    <Link to={profileHref(basePath, colleague.id)}>
-                      {colleague.name}
-                    </Link>
-                    <span className="text-body-secondary">
-                      {colleague.role}
-                    </span>
+                  <li key={colleague.id} className="list-group-item d-flex flex-wrap justify-content-between gap-2">
+                    <Link to={profileHref(basePath, colleague.id)}>{colleague.name}</Link>
+                    <span className="text-body-secondary">{colleague.role}</span>
                   </li>
                 ))}
               </ul>
@@ -276,15 +233,15 @@ export function ResearcherProfilePage({ basePath }: { basePath: string }) {
                   <dd className="col-sm-8">{contract.type}</dd>
                   <dt className="col-sm-4">Start</dt>
                   <dd className="col-sm-8">
-                    <time dateTime={contract.startDate}>
-                      {formatProfileDate(contract.startDate)}
-                    </time>
+                    <time dateTime={contract.startDate}>{formatProfileDate(contract.startDate)}</time>
                   </dd>
                   <dt className="col-sm-4">End</dt>
                   <dd className="col-sm-8 mb-0">
-                    <time dateTime={contract.endDate}>
-                      {formatProfileDate(contract.endDate)}
-                    </time>
+                    {contract.endDate === null ? (
+                      copy.openEnded
+                    ) : (
+                      <time dateTime={contract.endDate}>{formatProfileDate(contract.endDate)}</time>
+                    )}
                   </dd>
                 </dl>
               )}

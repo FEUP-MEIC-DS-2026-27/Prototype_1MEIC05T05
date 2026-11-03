@@ -1,35 +1,33 @@
 services:
-  db:
-    image: postgres:16-alpine
+  workforce-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: people_teams
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: workforce_db
     ports:
       - "5432:5432"
     volumes:
-      # init.sql runs only the first time the volume is created.
-      # To reset the data: docker compose down -v
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - pgdata:/var/lib/postgresql/data
+      - workforce_db_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d people_teams"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d workforce_db"]
       interval: 5s
-      timeout: 5s
       retries: 10
 
-  backend:
+  researcher-api:
     build: ./backend
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/people_teams
-      # CORS: by default localhost / 127.0.0.1 on ports 3000-3006 (same as
-      # frontend/rsbuild.config.ts). To allow other origins, uncomment:
-      # CORS_ORIGINS: http://localhost:4000
+      DATABASE_URL: postgresql://admin:password@workforce-db:5432/workforce_db
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006
     ports:
-      - "8000:8000"
+      # 8001 on the host so this API can run next to workforce-api (8000).
+      - "8001:8000"
     depends_on:
-      db:
+      workforce-db:
         condition: service_healthy
 
 volumes:
-  pgdata:
+  workforce_db_data:

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from 'react'
 
 import {
   loadFacetCatalog,
@@ -6,25 +6,26 @@ import {
   loadSearchSummary,
   searchResearchersAsync,
   type SearchSummary,
-} from "../api/researchers.ts"
-import { copy } from "../copy.ts"
-import { emptyResultCopy, resultSummary } from "../data/profile.ts"
-import type {
-  FacetCatalog,
-  FacetFilters,
-  SearchHit,
-  SearchSuggestion,
-} from "../types/researcher.ts"
-import { activeChips, addFacet, FacetPanel } from "./FacetPanel.tsx"
-import { ResearcherResultList } from "./ResearcherResultList.tsx"
-import { SearchBar } from "./SearchBar.tsx"
-import { StatusMessage } from "./StatusMessage.tsx"
+} from '../api/researchers'
+import {
+  copy,
+  emptyResultCopy,
+  resultSummary,
+  type FacetCatalog,
+  type FacetFilters,
+  type SearchHit,
+  type SearchSuggestion,
+} from '../shared'
+import FacetPanel, { activeChips, addFacet } from './FacetPanel'
+import ResearcherResultList from './ResearcherResultList'
+import SearchBar from './SearchBar'
+import StatusMessage from './StatusMessage'
 
 const emptyFacets: FacetFilters = {
   topics: [],
   skills: [],
   history: [],
-  completed: "all",
+  completed: 'all',
 }
 
 // Shown until the first facet catalog arrives from the API.
@@ -32,37 +33,40 @@ const emptyCatalog: FacetCatalog = {
   topics: [],
   skills: [],
   history: [],
-  anyCompleted: { value: "any", label: copy.anyCompletedProject, count: 0 },
+  anyCompleted: { value: 'any', label: copy.anyCompletedProject, count: 0 },
   projects: [],
 }
 
 type SearchLoad =
-  | { status: "loading" }
-  | { status: "ready"; results: SearchHit[] }
-  | { status: "error"; message: string }
+  { status: 'loading' } | { status: 'ready'; results: SearchHit[] } | { status: 'error'; message: string }
 
 function failureMessage(reason: unknown): string {
-  if (reason instanceof Error && reason.message !== "") return reason.message
-  return "Could not search researchers."
+  if (reason instanceof Error && reason.message !== '') return reason.message
+  return 'Could not search researchers.'
 }
 
-export function ResearcherSearchPage({ basePath }: { basePath: string }) {
-  const [query, setQuery] = useState("")
+export default function ResearcherSearchPage({ basePath }: { basePath: string }) {
+  const [query, setQuery] = useState('')
   const [facets, setFacets] = useState<FacetFilters>(emptyFacets)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const [load, setLoad] = useState<SearchLoad>({ status: "loading" })
+  const [load, setLoad] = useState<SearchLoad>({ status: 'loading' })
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [catalog, setCatalog] = useState<FacetCatalog>(emptyCatalog)
   const [summary, setSummary] = useState<SearchSummary | null>(null)
-  const chips = activeChips(facets, setFacets)
-  const results = load.status === "ready" ? load.results : null
+  // Completed projects as the API knows them (the facet catalog lists all of them).
+  const projectChoices = catalog.projects.map((choice) => ({
+    id: Number(choice.value),
+    name: choice.label,
+  }))
+  const chips = activeChips(facets, setFacets, projectChoices)
+  const results = load.status === 'ready' ? load.results : null
   const emptyCopy =
     results === null
       ? null
       : emptyResultCopy({
           query,
-          previous: facets.completed === "any" ? "any" : "all",
+          previous: facets.completed === 'any' ? 'any' : 'all',
           matchCount: results.length,
           // Until the summary arrives, fall back to the generic "no match".
           completedAssignmentCount: summary ? summary.withCompletedProjects : 1,
@@ -70,15 +74,15 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
 
   useEffect(() => {
     let active = true
-    setLoad({ status: "loading" })
-    searchResearchersAsync({ query, previous: "all", facets }).then(
+    setLoad({ status: 'loading' })
+    searchResearchersAsync({ query, previous: 'all', facets }).then(
       (hits) => {
-        if (active) setLoad({ status: "ready", results: hits })
+        if (active) setLoad({ status: 'ready', results: hits })
       },
       (reason: unknown) => {
         if (!active) return
-        setLoad({ status: "error", message: failureMessage(reason) })
-      }
+        setLoad({ status: 'error', message: failureMessage(reason) })
+      },
     )
     return () => {
       active = false
@@ -93,7 +97,7 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
       (next) => {
         if (active) setCatalog(next)
       },
-      () => {}
+      () => {},
     )
     return () => {
       active = false
@@ -102,7 +106,7 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
 
   useEffect(() => {
     let active = true
-    if (query.trim() === "") {
+    if (query.trim() === '') {
       setSuggestions([])
     } else {
       loadSearchSuggestions(query).then(
@@ -111,7 +115,7 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
         },
         () => {
           if (active) setSuggestions([])
-        }
+        },
       )
     }
     return () => {
@@ -125,7 +129,7 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
       (next) => {
         if (active) setSummary(next)
       },
-      () => {}
+      () => {},
     )
     return () => {
       active = false
@@ -133,12 +137,12 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
   }, [attempt])
 
   function pickSuggestion(suggestion: SearchSuggestion) {
-    if (suggestion.field === "name") {
+    if (suggestion.field === 'name') {
       setQuery(suggestion.label)
       return
     }
-    setFacets((current) => addFacet(current, suggestion))
-    setQuery("")
+    setFacets((current) => addFacet(current, suggestion, projectChoices))
+    setQuery('')
   }
 
   return (
@@ -149,26 +153,12 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
       </header>
       <div className="row g-4 align-items-start">
         <aside className="col-lg-4 d-none d-lg-block">
-          <FacetPanel
-            idPrefix="desk"
-            facets={facets}
-            catalog={catalog}
-            onFacets={setFacets}
-          />
+          <FacetPanel idPrefix="desk" facets={facets} catalog={catalog} onFacets={setFacets} />
         </aside>
         <div className="col-lg-8 d-flex flex-column gap-3">
           <div className="d-flex align-items-end gap-2">
-            <SearchBar
-              query={query}
-              suggestions={suggestions}
-              onQueryChange={setQuery}
-              onPick={pickSuggestion}
-            />
-            <button
-              type="button"
-              className="btn btn-outline-secondary d-lg-none"
-              onClick={() => setFiltersOpen(true)}
-            >
+            <SearchBar query={query} suggestions={suggestions} onQueryChange={setQuery} onPick={pickSuggestion} />
+            <button type="button" className="btn btn-outline-secondary d-lg-none" onClick={() => setFiltersOpen(true)}>
               {copy.filters}
             </button>
           </div>
@@ -182,16 +172,15 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
                   aria-label={`${copy.removeFilter}: ${chip.label}`}
                   onClick={chip.remove}
                 >
-                  <span className="text-body-secondary">{chip.group}</span>{" "}
-                  <span>{chip.label}</span>
+                  <span className="text-body-secondary">{chip.group}</span> <span>{chip.label}</span>
                   <span aria-hidden="true"> ×</span>
                 </button>
               ))}
             </div>
           ) : null}
-          {load.status === "loading" ? (
+          {load.status === 'loading' ? (
             <StatusMessage variant="loading" />
-          ) : load.status === "error" ? (
+          ) : load.status === 'error' ? (
             <StatusMessage
               variant="error"
               message={load.message}
@@ -200,15 +189,9 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
           ) : (
             <>
               {summary ? (
-                <p className="text-body-secondary small mb-0">
-                  {resultSummary(load.results.length, summary.total)}
-                </p>
+                <p className="text-body-secondary small mb-0">{resultSummary(load.results.length, summary.total)}</p>
               ) : null}
-              <ResearcherResultList
-                results={load.results}
-                basePath={basePath}
-                emptyMessage={emptyCopy}
-              />
+              <ResearcherResultList results={load.results} basePath={basePath} emptyMessage={emptyCopy} />
             </>
           )}
         </div>
@@ -226,20 +209,10 @@ export function ResearcherSearchPage({ basePath }: { basePath: string }) {
               <h2 className="offcanvas-title h5" id="facet-offcanvas-title">
                 {copy.filters}
               </h2>
-              <button
-                type="button"
-                className="btn-close"
-                aria-label="Close"
-                onClick={() => setFiltersOpen(false)}
-              />
+              <button type="button" className="btn-close" aria-label="Close" onClick={() => setFiltersOpen(false)} />
             </div>
             <div className="offcanvas-body">
-              <FacetPanel
-                idPrefix="offcanvas"
-                facets={facets}
-                catalog={catalog}
-                onFacets={setFacets}
-              />
+              <FacetPanel idPrefix="offcanvas" facets={facets} catalog={catalog} onFacets={setFacets} />
             </div>
           </div>
           <button

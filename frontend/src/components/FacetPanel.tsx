@@ -1,66 +1,55 @@
-import { useState } from "react"
+import { useState } from 'react'
 
-import { copy } from "../copy.ts"
 import {
-  completedProjectChoices,
-  facetWindow,
+  copy,
   FACET_PAGE,
-} from "../data/profile.ts"
-import type {
-  FacetCatalog,
-  FacetChoice,
-  FacetFilters,
-  SearchSuggestion,
-} from "../types/researcher.ts"
+  facetWindow,
+  type FacetCatalog,
+  type FacetChoice,
+  type FacetFilters,
+  type ProjectChoice,
+  type SearchSuggestion,
+} from '../shared'
 
-export function setMember(
-  values: readonly string[],
-  label: string,
-  on: boolean
-): string[] {
+export function setMember(values: readonly string[], label: string, on: boolean): string[] {
   if (on) return values.includes(label) ? [...values] : [...values, label]
   return values.filter((value) => value !== label)
 }
 
-export function setProject(
-  completed: FacetFilters["completed"],
-  id: number,
-  on: boolean
-): FacetFilters["completed"] {
+export function setProject(completed: FacetFilters['completed'], id: number, on: boolean): FacetFilters['completed'] {
   const current = Array.isArray(completed) ? completed : []
   if (!on) {
     const next = current.filter((value) => value !== id)
-    return next.length === 0 ? "all" : next
+    return next.length === 0 ? 'all' : next
   }
   return current.includes(id) ? current : [...current, id]
 }
 
 export function addFacet(
   current: FacetFilters,
-  suggestion: SearchSuggestion
+  suggestion: SearchSuggestion,
+  projects: readonly ProjectChoice[],
 ): FacetFilters {
-  if (suggestion.field === "topic") {
+  if (suggestion.field === 'topic') {
     return {
       ...current,
       topics: setMember(current.topics, suggestion.label, true),
     }
   }
-  if (suggestion.field === "skill") {
+  if (suggestion.field === 'skill') {
     return {
       ...current,
       skills: setMember(current.skills, suggestion.label, true),
     }
   }
-  if (suggestion.field === "history") {
+  if (suggestion.field === 'history') {
     return {
       ...current,
       history: setMember(current.history, suggestion.label, true),
     }
   }
-  if (suggestion.field === "previousProject") {
-    const project = completedProjectChoices().find(
-      (item) => item.name === suggestion.label
-    )
+  if (suggestion.field === 'previousProject') {
+    const project = projects.find((item) => item.name === suggestion.label)
     if (!project) return current
     return {
       ...current,
@@ -72,7 +61,8 @@ export function addFacet(
 
 export function activeChips(
   facets: FacetFilters,
-  onFacets: (update: (current: FacetFilters) => FacetFilters) => void
+  onFacets: (update: (current: FacetFilters) => FacetFilters) => void,
+  projects: readonly ProjectChoice[],
 ): { key: string; group: string; label: string; remove: () => void }[] {
   const chips: {
     key: string
@@ -116,19 +106,17 @@ export function activeChips(
         })),
     })
   }
-  if (facets.completed === "any") {
+  if (facets.completed === 'any') {
     chips.push({
-      key: "completed:any",
+      key: 'completed:any',
       group: copy.previousProjects,
       label: copy.anyCompletedProject,
-      remove: () => onFacets((current) => ({ ...current, completed: "all" })),
+      remove: () => onFacets((current) => ({ ...current, completed: 'all' })),
     })
   }
   if (Array.isArray(facets.completed)) {
     for (const id of facets.completed) {
-      const name =
-        completedProjectChoices().find((project) => project.id === id)?.name ??
-        String(id)
+      const name = projects.find((project) => project.id === id)?.name ?? String(id)
       chips.push({
         key: `project:${id}`,
         group: copy.previousProjects,
@@ -187,9 +175,7 @@ function ChoiceGroup({
 }) {
   return (
     <fieldset className="border-bottom pb-3 mb-3">
-      <legend className="form-label fw-semibold float-none w-auto px-0">
-        {legend}
-      </legend>
+      <legend className="form-label fw-semibold float-none w-auto px-0">{legend}</legend>
       {choices.map((choice, index) => (
         <ChoiceRow
           key={choice.value}
@@ -222,7 +208,7 @@ function PagedChoices({
   isChecked: (choice: FacetChoice) => boolean
   onCheckedChange: (choice: FacetChoice, on: boolean) => void
 }) {
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(FACET_PAGE)
   const window = facetWindow(choices, { query, limit, selected })
   const rows = (
@@ -246,9 +232,7 @@ function PagedChoices({
           onCheckedChange={(on) => onCheckedChange(choice, on)}
         />
       ))}
-      {window.visible.length === 0 ? (
-        <p className="text-body-secondary small mb-0">{copy.noFacetMatches}</p>
-      ) : null}
+      {window.visible.length === 0 ? <p className="text-body-secondary small mb-0">{copy.noFacetMatches}</p> : null}
       {window.remaining > 0 ? (
         <button
           type="button"
@@ -263,15 +247,13 @@ function PagedChoices({
   if (hideLegend) return <div className="d-flex flex-column">{rows}</div>
   return (
     <fieldset className="border-bottom pb-3 mb-3">
-      <legend className="form-label fw-semibold float-none w-auto px-0">
-        {legend}
-      </legend>
+      <legend className="form-label fw-semibold float-none w-auto px-0">{legend}</legend>
       {rows}
     </fieldset>
   )
 }
 
-export function FacetPanel({
+export default function FacetPanel({
   idPrefix,
   facets,
   catalog,
@@ -325,17 +307,15 @@ export function FacetPanel({
           }
         />
         <fieldset>
-          <legend className="form-label fw-semibold float-none w-auto px-0">
-            {copy.previousProjects}
-          </legend>
+          <legend className="form-label fw-semibold float-none w-auto px-0">{copy.previousProjects}</legend>
           <ChoiceRow
             id={`${idPrefix}-completed-any`}
             choice={catalog.anyCompleted}
-            checked={facets.completed === "any"}
+            checked={facets.completed === 'any'}
             onCheckedChange={(on) =>
               onFacets((current) => ({
                 ...current,
-                completed: on ? "any" : "all",
+                completed: on ? 'any' : 'all',
               }))
             }
           />
@@ -345,23 +325,12 @@ export function FacetPanel({
             placeholder={copy.searchProjects}
             hideLegend
             choices={catalog.projects}
-            selected={
-              Array.isArray(facets.completed)
-                ? facets.completed.map(String)
-                : []
-            }
-            isChecked={(choice) =>
-              Array.isArray(facets.completed) &&
-              facets.completed.includes(Number(choice.value))
-            }
+            selected={Array.isArray(facets.completed) ? facets.completed.map(String) : []}
+            isChecked={(choice) => Array.isArray(facets.completed) && facets.completed.includes(Number(choice.value))}
             onCheckedChange={(choice, on) =>
               onFacets((current) => ({
                 ...current,
-                completed: setProject(
-                  current.completed,
-                  Number(choice.value),
-                  on
-                ),
+                completed: setProject(current.completed, Number(choice.value), on),
               }))
             }
           />

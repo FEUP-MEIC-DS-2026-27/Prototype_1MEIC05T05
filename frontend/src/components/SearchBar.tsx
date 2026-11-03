@@ -1,11 +1,10 @@
-import { useState, type FocusEvent, type KeyboardEvent } from "react"
+import { useState, type FocusEvent, type KeyboardEvent } from 'react'
 
-import { copy } from "../copy.ts"
-import type { SearchSuggestion } from "../types/researcher.ts"
+import { copy, type SearchSuggestion } from '../shared'
 
-const suggestionListId = "researcher-suggestions"
+const suggestionListId = 'researcher-suggestions'
 
-const suggestionGroup: Record<SearchSuggestion["field"], string> = {
+const suggestionGroup: Record<SearchSuggestion['field'], string> = {
   name: copy.name,
   topic: copy.researchTopics,
   skill: copy.skills,
@@ -14,7 +13,7 @@ const suggestionGroup: Record<SearchSuggestion["field"], string> = {
 }
 
 type SuggestionGroup = {
-  field: SearchSuggestion["field"]
+  field: SearchSuggestion['field']
   items: { suggestion: SearchSuggestion; index: number }[]
 }
 
@@ -32,24 +31,22 @@ function groupSuggestions(suggestions: readonly SearchSuggestion[]): SuggestionG
 }
 
 function SuggestionLabel({ label, query }: { label: string; query: string }) {
-  const needle = query.trim().toLocaleLowerCase("en")
-  const folded = label.toLocaleLowerCase("en")
+  const needle = query.trim().toLocaleLowerCase('en')
+  const folded = label.toLocaleLowerCase('en')
   const index = folded.indexOf(needle)
-  if (needle === "" || index < 0 || folded.length !== label.length) {
+  if (needle === '' || index < 0 || folded.length !== label.length) {
     return label
   }
   return (
     <>
       {label.slice(0, index)}
-      <span className="fw-semibold">
-        {label.slice(index, index + needle.length)}
-      </span>
+      <span className="fw-semibold">{label.slice(index, index + needle.length)}</span>
       {label.slice(index + needle.length)}
     </>
   )
 }
 
-export function SearchBar({
+export default function SearchBar({
   query,
   suggestions,
   onQueryChange,
@@ -64,14 +61,8 @@ export function SearchBar({
   const [escapeDismissed, setEscapeDismissed] = useState(false)
   const [pickDismissed, setPickDismissed] = useState(false)
   const [activeSuggestion, setActiveSuggestion] = useState(0)
-  const suggestionsOpen =
-    searchFocused &&
-    !escapeDismissed &&
-    !pickDismissed &&
-    suggestions.length > 0
-  const activeSuggestionIndex = suggestionsOpen
-    ? Math.min(activeSuggestion, suggestions.length - 1)
-    : 0
+  const suggestionsOpen = searchFocused && !escapeDismissed && !pickDismissed && suggestions.length > 0
+  const activeSuggestionIndex = suggestionsOpen ? Math.min(activeSuggestion, suggestions.length - 1) : 0
 
   function pickSuggestion(suggestion: SearchSuggestion) {
     onPick(suggestion)
@@ -81,25 +72,23 @@ export function SearchBar({
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!suggestionsOpen) return
-    if (event.key === "ArrowDown") {
+    if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setActiveSuggestion((index) =>
-        Math.min(index + 1, suggestions.length - 1)
-      )
+      setActiveSuggestion((index) => Math.min(index + 1, suggestions.length - 1))
       return
     }
-    if (event.key === "ArrowUp") {
+    if (event.key === 'ArrowUp') {
       event.preventDefault()
       setActiveSuggestion((index) => Math.max(index - 1, 0))
       return
     }
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault()
       const suggestion = suggestions[activeSuggestionIndex]
       if (suggestion) pickSuggestion(suggestion)
       return
     }
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault()
       setEscapeDismissed(true)
     }
@@ -124,11 +113,7 @@ export function SearchBar({
         aria-autocomplete="list"
         aria-expanded={suggestionsOpen}
         aria-controls={suggestionsOpen ? suggestionListId : undefined}
-        aria-activedescendant={
-          suggestionsOpen
-            ? `${suggestionListId}-${activeSuggestionIndex}`
-            : undefined
-        }
+        aria-activedescendant={suggestionsOpen ? `${suggestionListId}-${activeSuggestionIndex}` : undefined}
         value={query}
         placeholder={copy.searchPlaceholder}
         onChange={(event) => {
@@ -140,21 +125,10 @@ export function SearchBar({
         onKeyDown={onKeyDown}
       />
       {suggestionsOpen ? (
-        <div
-          id={suggestionListId}
-          role="listbox"
-          aria-label={copy.suggestions}
-          className="list-group mt-1"
-        >
+        <div id={suggestionListId} role="listbox" aria-label={copy.suggestions} className="list-group mt-1">
           {groupSuggestions(suggestions).map((group) => (
-            <div
-              key={group.field}
-              role="group"
-              aria-label={suggestionGroup[group.field]}
-            >
-              <div className="list-group-item py-1 small text-body-secondary">
-                {suggestionGroup[group.field]}
-              </div>
+            <div key={group.field} role="group" aria-label={suggestionGroup[group.field]}>
+              <div className="list-group-item py-1 small text-body-secondary">{suggestionGroup[group.field]}</div>
               {group.items.map(({ suggestion, index }) => {
                 const selected = index === activeSuggestionIndex
                 return (
@@ -163,7 +137,7 @@ export function SearchBar({
                     id={`${suggestionListId}-${index}`}
                     role="option"
                     aria-selected={selected}
-                    className={`list-group-item list-group-item-action${selected ? " active" : ""}`}
+                    className={`list-group-item list-group-item-action${selected ? ' active' : ''}`}
                     onMouseEnter={() => setActiveSuggestion(index)}
                     onPointerDown={(event) => {
                       event.preventDefault()

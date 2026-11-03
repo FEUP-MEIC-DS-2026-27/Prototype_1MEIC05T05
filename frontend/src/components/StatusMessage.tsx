@@ -1,26 +1,22 @@
 type StatusMessageProps =
   | {
-      variant: "loading"
+      variant: 'loading'
       message?: string
       onRetry?: never
     }
   | {
-      variant: "error"
+      variant: 'error'
       message: string
       onRetry?: () => void
     }
   | {
-      variant: "empty"
+      variant: 'empty'
       message: string
       onRetry?: never
     }
 
-export function StatusMessage({
-  variant,
-  message,
-  onRetry,
-}: StatusMessageProps) {
-  if (variant === "loading") {
+export default function StatusMessage({ variant, message, onRetry }: StatusMessageProps) {
+  if (variant === 'loading') {
     return (
       <div className="d-flex align-items-center gap-2">
         <div className="spinner-border" role="status">
@@ -31,16 +27,12 @@ export function StatusMessage({
     )
   }
 
-  if (variant === "error") {
+  if (variant === 'error') {
     return (
       <div className="alert alert-danger" role="alert">
         <p className="mb-2">{message}</p>
         {onRetry ? (
-          <button
-            type="button"
-            className="btn btn-outline-danger"
-            onClick={onRetry}
-          >
+          <button type="button" className="btn btn-outline-danger" onClick={onRetry}>
             Retry
           </button>
         ) : null}

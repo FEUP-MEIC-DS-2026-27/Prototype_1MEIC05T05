@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "rsbuild dev",
-    "build": "rsbuild build",
+    "build": "tsc -b && rsbuild build",
+    "lint": "oxlint",
+    "preview": "rsbuild preview",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc -b",
-    "preview": "rsbuild preview",
     "test": "vitest run"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "@types/node": "^24",
     "@types/react": "18.3.27",
     "@types/react-dom": "18.3.7",
+    "oxlint": "^1.91.0",
     "prettier": "^3.9.10",
     "typescript": "~7.0.2",
     "vitest": "^5.0.5"

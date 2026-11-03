@@ -1,10 +1,10 @@
-import { Link } from "react-router-dom"
+import { Link } from 'react-router-dom'
 
-export function PageNotFound({ basePath }: { basePath: string }) {
+export default function PageNotFound({ basePath }: { basePath: string }) {
   return (
     <>
       <h5>Page not found</h5>
-      <Link to={basePath || "/"}>Back to search</Link>
+      <Link to={basePath || '/'}>Back to search</Link>
     </>
   )
 }

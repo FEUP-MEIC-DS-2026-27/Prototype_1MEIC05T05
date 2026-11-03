@@ -1,11 +1,11 @@
 """People & Teams prototype - FastAPI backend (researcher search + profile).
 
 All API endpoints and SQL queries live in this single file, mirroring the
-architecture of the other group's prototype. Run with:
+architecture of the workforce-service prototype. Run with:
 
     uvicorn main:app --reload --port 8000
 
-The JSON is camelCase and has the same shape as frontend/src/types/researcher.ts.
+The JSON is camelCase and has the same shape as the types in frontend/src/shared.ts.
 UI texts (labels such as "Research topics") stay in the frontend: the API only
 returns data (field names, values, counts).
 
@@ -15,67 +15,43 @@ which is fine for a prototype with a small data set.
 """
 
 import os
-from contextlib import contextmanager
 
-import psycopg2
+import psycopg
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from psycopg2.extras import RealDictCursor
+from psycopg.rows import dict_row
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/people_teams"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:password@localhost:5432/workforce_db")
 # The frontend is a Module Federation remote: its code runs in the page of the
-# host app, so the browser sends the host's origin. By default we accept the
-# same origins as frontend/rsbuild.config.ts (localhost / 127.0.0.1, ports
-# 3000-3006; the remote itself runs on 3006). Override with CORS_ORIGIN_REGEX,
-# or add exact origins (comma separated) with CORS_ORIGINS.
-CORS_ORIGIN_REGEX = os.getenv(
-    "CORS_ORIGIN_REGEX", r"^http://(localhost|127\.0\.0\.1):300[0-6]$"
-)
-CORS_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "").split(",")
-    if origin.strip()
-]
+# host app, so the browser sends the host's origin (ports 3000-3006).
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", ",".join(f"http://localhost:{port}" for port in range(3000, 3007))
+).split(",")
 
 SUGGESTION_CAP = 8
 
-app = FastAPI(title="People & Teams API", version="0.2.0")
+app = FastAPI(title="researcher-service", description="Researcher search and profiles for HumanISE.info")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_origin_regex=CORS_ORIGIN_REGEX,
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
 
 
-# ---------------------------------------------------------------------------
-# Database helpers
-# ---------------------------------------------------------------------------
-
-@contextmanager
-def get_cursor():
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            yield cur
-    finally:
-        conn.close()
+def run_sql(sql, params=None):
+    with psycopg.connect(DATABASE_URL, row_factory=dict_row) as conn:
+        return conn.execute(sql, params).fetchall()
 
 
 def fetch_all(sql: str, params: tuple = ()):
-    with get_cursor() as cur:
-        cur.execute(sql, params)
-        return cur.fetchall()
+    return run_sql(sql, params)
 
 
 def fetch_one(sql: str, params: tuple = ()):
-    with get_cursor() as cur:
-        cur.execute(sql, params)
-        return cur.fetchone()
+    rows = run_sql(sql, params)
+    return rows[0] if rows else None
 
 
 # One row per researcher with everything the search needs. Topics are ordered
@@ -321,10 +297,10 @@ def load_search_context():
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/api/health")
+@app.get("/health")
 def health():
-    fetch_one("SELECT 1 AS ok")
-    return {"status": "ok"}
+    run_sql("SELECT 1")
+    return {"status": "ok", "service": "researcher-service"}
 
 
 # The fixed paths must be declared before /api/researchers/{researcher_id}.
@@ -453,14 +429,14 @@ def get_researcher_profile(researcher_id: int):
         (team["id"], researcher_id),
     )
     # A researcher may have several contracts: show the most recent one.
-    # The profile page needs both dates, so a contract without them counts as
-    # "no contract on file".
+    # A contract without an end date is open-ended (endDate is null). One
+    # without a start date counts as "no contract on file".
     contract = fetch_one(
         """
         SELECT type, start_date, end_date
         FROM researcher_contracts
         WHERE researcher_id = %s
-          AND start_date IS NOT NULL AND end_date IS NOT NULL
+          AND start_date IS NOT NULL
         ORDER BY start_date DESC, id DESC
         LIMIT 1
         """,
@@ -508,7 +484,9 @@ def get_researcher_profile(researcher_id: int):
         else {
             "type": contract["type"],
             "startDate": contract["start_date"].isoformat(),
-            "endDate": contract["end_date"].isoformat(),
+            "endDate": None
+            if contract["end_date"] is None
+            else contract["end_date"].isoformat(),
         },
         "projects": [
             {
