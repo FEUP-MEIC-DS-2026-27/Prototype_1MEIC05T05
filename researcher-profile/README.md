@@ -21,3 +21,5 @@ npm run build
 ## UI components
 
 UI components live under `src/components/` and use Bootstrap. They do not live under `components/ui/`. Add one by creating a file in `src/components/`.
+
+Below the `lg` breakpoint, facet filters open in a Bootstrap offcanvas from a Filters button. From `lg` upward, the same topic, skill, history, and completed-project controls stay visible in a sidebar beside the results.

@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom"
 import { PageNotFound } from "./components/PageNotFound.tsx"
 import { ResearcherProfileLayout } from "./components/ResearcherProfileLayout.tsx"
 import { ResearcherProfilePage } from "./components/ResearcherProfilePage.tsx"
+import { ResearcherSearchPage } from "./components/ResearcherSearchPage.tsx"
 import { contractVersion, type ResearcherProfileProps } from "./types.ts"
 
 /**
@@ -17,7 +18,10 @@ export default function ResearcherProfile({
   return (
     <ResearcherProfileLayout>
       <Routes>
-        <Route index element={<p>Researcher search placeholder</p>} />
+        <Route
+          index
+          element={<ResearcherSearchPage basePath={basePath} />}
+        />
         <Route
           path=":id"
           element={<ResearcherProfilePage basePath={basePath} />}
